@@ -1,0 +1,722 @@
+---
+title: "Homework 1"
+author: "Denis Ostroushko"
+date: '`r as.Date(Sys.Date())`'
+output: 
+  bookdown::pdf_document2: 
+number_sections: FALSE
+toc: FALSE
+---
+
+```{r, echo = F, setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = F, warning = F, fig.height=4, fig.width=7,
+                      fig.align='center', fig.pos = "H")
+options(scipen=999)
+
+
+alpha_level <- .33 # alpha level for dots through the document 
+```
+
+```{r, include = F, echo  = F}
+source('/Users/denisostroushko/Desktop/UofM MS/Package master list .R')
+```
+
+```{r read data }
+
+FG2 <- read.table("https://jaredhuling.org/data/pubh7406/FG2.txt",
+                  header = TRUE)
+
+FG2$G1 <- factor(FG2$G1, levels = sort(unique(FG2$G1)))
+FG2$G2 <- factor(FG2$G2, levels = sort(unique(FG2$G2)))
+
+FG2$G_composite <- factor(with(FG2, paste0("G1: ", G1, "; G2: ", G2)))
+
+FG2$G_composite <- factor(FG2$G_composite, 
+                          levels = 
+                            unique(
+                              FG2 %>% 
+                                group_by(G_composite) %>% 
+                                summarize(mean = mean(Y)) %>% 
+                                arrange(mean)
+                            )$G_composite
+                            )
+
+# View(FG2)
+```
+
+```{r}
+# fit the model here to use means in summary and in the work in parts 1 and 2 
+
+m1 <- lm(Y ~ G1 * G2, 
+         data = FG2, 
+         x = TRUE, # bring in design matrix to validate that we did the right specifications 
+         contrasts = 
+           list(
+             G1 = contr.sum,
+             G2 = contr.sum
+           )
+         )
+```
+
+# Problem 1. (5 points)
+
+Provide preliminary visualizations of the data. Provide initial assessments about what can be seen from these visualizations in relation to an Analysis of Variance analysis of the data.
+
+## Problem 1 Solution.  
+
+We begin this analysis by looking at the distribution of our response variable $Y$, 
+which is the Fasting glucose levels in millimoles per liter. Measurements are recorded on the 
+logarithmic scale. 
+
+First, we will look at the distribution of $Y$. Figure \@ref(fig:y-dist) suggests that the 
+sample distribution of $Y$ is approximately normal. Of course we make no assumption about the 
+distribution of observed values, but it is good to know if there are any obvious outliers
+that we might want to handle right away. 
+
+```{r y-dist, fig.cap= "Distribution of Y for 1,000 observations"}
+
+ggplot(data = FG2, 
+       aes(x = Y)) + 
+  
+  geom_histogram(bins = 50, color = "black", fill = "lightgrey") + 
+  theme_minimal() + 
+  
+  geom_vline(aes(xintercept = mean(FG2$Y), color = "Y Mean",), size = 2,  linetype = "dashed") + 
+  
+  xlab("Measurements of Y") + 
+  ylab("Count") + 
+  
+#  ggtitle(paste0("Distribution of Y for ", prettyNum(nrow(FG2), big.mark = ","), " Observations")) +
+  
+  scale_color_manual(values = c("Y Mean" = "red")) + 
+  theme(
+    legend.title = element_blank()
+  )
+
+```
+
+As we can see on Figure \@ref(fig:preliminary-G1), sample average for $G_1 = 2$ is slightly higher
+than the other two groups, which have identical means. 
+
+Group 2 also has the lowest number of observations. 
+
+We can see that the mean and median for each group is approximately equal.
+
+Finally, we can see that the variance in each group is approximately similar, especially for 
+groups 0 and 1. Groups 2 apperas slightly different, however, without proper accounting for the 
+sample size difference, it is hard to make a decisive statement. We will learn more when 
+performing format statistical tests. 
+
+```{r preliminary-G1, fig.cap="Distribution of Glucose Measurements over G1 Levels"}
+
+ggplot(data = FG2, 
+       aes(x = G1, 
+           y = Y)) + 
+  theme_minimal() + 
+  geom_boxplot() + 
+  geom_jitter(alpha = alpha_level) +
+  
+  geom_hline(aes(color = "Mean for G1 = 0", yintercept = mean(FG2[FG2$G1 == "0", ]$Y)), 
+             linetype = "dashed", size = 1) + 
+  
+  geom_hline(aes(color = "Mean for G1 = 1", yintercept = mean(FG2[FG2$G1 == "1", ]$Y)), 
+             linetype = "dashed", size = 1) + 
+  
+  geom_hline(aes(color = "Mean for G1 = 2", yintercept = mean(FG2[FG2$G1 == "2", ]$Y)), 
+             linetype = "dashed", size = 1) + 
+  
+  ggtitle(
+    paste0(
+      "G1 = 0 Mean: ", round(mean(FG2[FG2$G1 == "0", ]$Y),2), "; ",
+      "G1 = 1 Mean: ", round(mean(FG2[FG2$G1 == "1", ]$Y),2), "; ",
+      "G1 = 2 Mean: ", round(mean(FG2[FG2$G1 == "2", ]$Y),2)
+    )
+  ) + 
+  
+  theme(
+    legend.title = element_blank()
+  ) 
+
+
+```
+
+Same conclusions we made about $G_1$ levels carry on to the $G_2$ levels. We can see the distributions in Figure \@ref(fig:preliminary-G2). It is even harder to make preliminary 
+statements about the distribution of Group 2 due to its sample size. 
+
+```{r preliminary-G2, fig.cap="Distribution of Glucose Measurements over G2 Levels"}
+
+ggplot(data = FG2, 
+       aes(x = G2, 
+           y = Y)) +  
+  theme_minimal() + 
+  geom_boxplot() +
+  geom_jitter(alpha = alpha_level) + 
+  
+  geom_hline(aes(color = "Mean for G2 = 0", yintercept = mean(FG2[FG2$G2 == "0", ]$Y)), 
+             linetype = "dashed", size = 1) + 
+  
+  geom_hline(aes(color = "Mean for G2 = 1", yintercept = mean(FG2[FG2$G2 == "1", ]$Y)), 
+             linetype = "dashed", size = 1) + 
+  
+  geom_hline(aes(color = "Mean for G2 = 2", yintercept = mean(FG2[FG2$G2 == "2", ]$Y)), 
+             linetype = "dashed", size = 1) + 
+    
+  ggtitle(
+    paste0(
+      "G2 = 0 Mean: ", round(mean(FG2[FG2$G2 == "0", ]$Y),2), "; ",
+      "G2 = 1 Mean: ", round(mean(FG2[FG2$G2 == "1", ]$Y),2), "; ",
+      "G2 = 2 Mean: ", round(mean(FG2[FG2$G2 == "2", ]$Y),2)
+                         
+    )
+  ) + 
+  
+  theme(
+    legend.title = element_blank()
+  ) 
+
+```
+
+It is favorable to us that while the variances for groups with smaller sample size appear unequal
+when compared with the other groups, we can see that the observations in group 2 for both $G_1$ and 
+$G_2$ are more centered around its mean and median. Bigger spread of data with smaller sample size 
+would be highly unfavorable to our analysis. 
+
+Finally we can combine $G_1$ and $G_2$ levels and create nine groups. We can see their distributions
+in Figure \@ref(fig:composite). I present box plots in order of their respective sample means. 
+Group with the lowest mean is located on the left, while a group with the highest mean is located 
+on the left part of the plot. This plot reveals that we indeed have a very unbalanced design 
+here. Variance of each groups with comparable sample sizes appear similar visually. None of the 
+box plots show evidence of outliers that can skew sample means. 
+
+```{r composite, fig.cap="Distribution of Y in each specific bucket"}
+
+ggplot(data = FG2, 
+       aes(x = G_composite, 
+           y = Y, 
+           color = G_composite)) +
+  geom_boxplot(show.legend = F) +  # show.legend usually removes legend from the right side of the plot, but not in this instance??? 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45), 
+        legend.position = 'none')  + # this removes legend from the left hand side 
+  geom_jitter(alpha = alpha_level) + 
+  
+  xlab("Specific Analysis Buckets")
+
+```
+
+We can summarize these data in Table \@ref(tab:means). We present sample average and 95% confidence 
+interval using standard errors obtained from the data. Confidence intervals are not adjusted for 
+multiple comparisons. Estimation of confidence intervals without accounting for multiple comparison adjustments produces narrower intervals. Even with the narrow intervals, we can see that the 
+sample variation makes there bands wide, therefore, we should not highly significant results 
+or high values of estimated effects of $G_1$ and $G_2$ levels on measurements of $Y$. 
+However, with a large sample size that we have here, it might be possible to detect significant 
+effects. 
+
+```{R means}
+emmeans(m1, c("G1", "G2")) %>% 
+  data.frame() %>% 
+  select(-SE, -df) %>% 
+  
+  bind_cols(FG2 %>% 
+    group_by(
+      G1, G2
+    ) %>% 
+    summarise(
+      N = n()
+    )
+  ) %>% 
+  
+  select(`G1...1`, `G2...2`, N, emmean, `lower.CL`, `upper.CL`)   %>% 
+  
+  kable(booktabs = T, align = 'c', 
+        digits = 2, 
+        col.names = c("G1", "G2", "N", "Mean", "Lower CL", "Upper CL"),
+        caption = "Sample Means with 95 Percent Confidence Intervals"
+          # apparently including a '%" sign into the caption breaks this table completely, 
+          # make R print latex code, and overall affects the output. 
+          # just use the word 'Percent' next time 
+        ) %>% 
+  kable_styling(
+    latex_options = c("striped", "condesed", "hold_position")
+  ) 
+```
+
+
+Before we finish our preliminary assessment of the data, we need to look at the treatment plots. 
+Each dot represents a sample mean for a given group. We have a total of nine sample means 
+for nine groups that are subject to analysis. Figure \@ref(fig:treatments) shows that we potentially
+have an interaction of levels of $G_1$ and $G_2$. We can see that as $G_1$ levels go from 
+0 to 1 to 2, the average response increases for $G_2$ levels 0 and 1. However, when we consider the 
+effects of $G_1$ when we restrict the sample for only those observations that are in $G_2$ level 2,
+then as we go from $G_1$ group 0 to 1 to 2, then the average response decreases. 
+The number of observations that fall into this group is quite small, but the direction of interaction
+is quite strong and different. If we detect significance of interaction, it will be due to this 
+phenomenon. 
+
+```{r treatments, fig.cap= "Treatment plot for levels of G1 and G2" }
+
+FG2 %>% 
+  group_by(
+    G1, G2
+  ) %>% 
+  
+  summarize(N = n(), 
+            mean = mean(Y)) %>% 
+  
+  mutate(G1 = as.numeric(G1) - 1 ) %>% 
+
+  ggplot(aes(x = G1, 
+             y = mean)) + 
+  
+  geom_point(aes(
+             size = N, 
+             color = G2)) + 
+  
+  scale_x_continuous(breaks = c(0,1,2)) + 
+  
+  geom_line(aes(size = 1, color = G2)) + 
+  
+  theme_minimal() + 
+  guides(size = "none") + # this line removes legend for the size of points
+                        # if I wanted to remove 'color' i would specify color = F
+
+  scale_color_discrete(name = "Levels of G2") + 
+  
+  xlab("levels of G1") + 
+  ylab("Average Fasting Glucose Measurement") + 
+  ggtitle("Average Glucose Levels")
+  
+```
+
+# Problem 2. (8 points) 
+
+Write down a two-factor ANOVA model using $G_1$ and $G_2$ and their interaction to explain the variation in the fasting glucose level. Define any notation you use and list all assumptions that are made by this model.
+
+## Problem 2 Solution. 
+
+These data contains `r length(unique(FG2$G1))` unique levels for $G_1$, and `r length(unique(FG2$G2))` unique levels for $G_2$. Thus, 
+we have a total of `r length(unique(FG2$G1)) * length(unique(FG2$G2))` cell means. 
+
+Each cell mean will be represented in terms of the factor levels: 
+
+$$\Large \mu_{ij} := G_{1i} + G_{2j} + (G_1 G_2)_{ij}$$
+
+Model terms are defined below: 
+
+  *   $G_{1i}$ is the $i^{th}$ level of variable $G_{1}$. Index $i$ takes on values `r paste(unique(FG2$G1))`. This terms represents 
+      the main effect of $G_1$ level on the fasting glucose level. 
+  
+  *   $G_{2j}$ is the $j^{th}$ level of variable $G_{2}$. Index $j$ takes on values `r paste(unique(FG2$G2))`. This terms represents 
+      the main effect of $G_2$ level on the fasting glucose level. 
+  
+  *   $(G_1 G_2)_{ij}$ is the interaction term between the $i^{th}$ level of $G_1$ and $j^{th}$ level of $G_2$, and helps us tell if 
+      the impact of a given $G_1$ level on the average fasting glucose level is different across different levels of $G_2$ levels. 
+      Same implication can be stated for $G_2$ levels across varying $G_1$ levels. 
+      
+  *   $\mu_{ij}$ is then the average value of the fasting glucose levels for a given combination of levels. 
+  
+Once we define what factors $\mu_{ij}$ depends on, we can use that definition to write an expression for each individual observation and 
+state model assumptions. We consider observations $Y_{ijk}$, that is a $k^{th}$ observation in the $i^{th}$ level of $G_1$ and $j^{th}$ 
+level of $G_2$. We assume that $Y_{ijk}$ comes from a distribution with mean $\mu_{ij}$, and thus, we can write $Y_{ijk}$ as: 
+
+$$\Large Y_{ijk} = \mu_{ij} + \epsilon_{ijk}$$ 
+
+where $\epsilon_{ijk}$ is a random error that we can not control for with the defined model. 
+
+Assumptions for the two factor ANOVA model are stated below: 
+
+1. All observations $Y_{ijk}$ are independent. 
+
+2. Observations $Y_{ijk}$ are normally distributed and independent. $Y_{ijk}$ are independent and normally distributed within levels $i$ and 
+    $j$. Thus, $Y_{ijk}$ ~ $N(\mu_{ij}, \sigma^2)$. 
+    
+3. We assume that all distributions have equal and finite variance. So, the distributions only differ in their means, a center of the 
+  distribution, and not in variances. 
+
+# Problem 3. (4 points) 
+
+Provide the ANOVA table associated with the model defined in the previous question and explain what the different sums of squares are.
+
+
+## Problem 3 Solution. 
+
+We fit a linear model using `R` and present the output below. We specify the equation as `Y ~ G1 + G2 + G1:G2`, 
+so we will interpret sequential ANOVA table by looking at the sum of squares attributed to $G_1$, then 
+we will look at the sum of squares attributed to $G_2$ after accounting for the main effect of $G_1$, and 
+finally we will look at the interaction term sum of squares. 
+
+```{r anova1}
+
+anova(m1) %>% 
+  kable(booktabs = T, align = c('l', rep('c', (length(anova(m1))-1))), 
+        caption = 'ANOVA Table for a two-factor cell means model', 
+        digits = 2,  # whoooooa, this rounds every numeric value to 2 digits to the right from a decimal point right away 
+        col.names = c("DF", "Sum of Squares", "Mean Sum of Squared", "F-value", "P-value")) %>% 
+  kable_styling(latex_options = c("striped", "condensed", "HOLD_position")) 
+
+# a neat way to store anova table outputs without saving down the data frame and storing row names to variables 
+# we can apply tidy to model outputs now 
+
+SS_G1 <- 
+  
+  anova(m1) %>%
+  select(`Sum Sq`) %>%
+  filter(rownames(anova(m1)) == "G1")
+
+SS_G2 <- 
+  
+  anova(m1) %>%
+  select(`Sum Sq`) %>%
+  filter(rownames(anova(m1)) == "G2")
+
+total_SS <- round(anova(m1) %>% summarize(sum(`Sum Sq` )), 1)
+```
+
+*  ANOVA table does not show the total sum of squares, i.e. the sum of squared differences between each 
+  individual observation and the average measurement for $Y$, which we refer to as $\bar Y$. 
+    
+  The total variation is the arithmetic sum of Sum of Squares from each row of the ANOVA table. In this 
+  problem the total sum of squares is `r total_SS`
+
+* Sum of squares associated with $G_1$ is `r round(SS_G1, 2)`. 
+  This sum of squares shows how much total of variation can be attributed to the effect of $G_1$. 
+
+  While this seems like a relatively small proportion of variation, the sample size and the effect size 
+  make it such that the effects of varying levels of $G_1$ on the average response level are statistically 
+  significant, as indicated by the p-value. 
+    
+* The sum of squares associated with $G_2$ is `r round(SS_G2,2)`. 
+  This sum of squares shows how much additional variation can be attributed to the effect of $G_2$ levels, 
+  after accounting for the main effects of $G_1$. 
+    
+  Since this is a sequential sum of squares anova table, if we ask `R` to run a model where $G_2$ is 
+  specified before $G_1$, this sum fo squares quantity would be different. 
+    
+```{r calculating a differnt anova model }
+
+save <- round(
+anova(lm(Y ~ G2 + G1 + G2:G1, 
+         data = FG2, 
+         contrasts = 
+           list(
+             G1 = contr.sum,
+             G2 = contr.sum
+           )
+         )) %>% 
+  
+  select(`Sum Sq`) %>% 
+  filter(rownames(anova(lm(Y ~ G2 + G1 + G2:G1, 
+         data = FG2, 
+         contrasts = 
+           list(
+             G1 = contr.sum,
+             G2 = contr.sum
+           )
+         ))) == "G2"), 2)
+
+
+```
+
+  In fact, if we reorder term specifications such that the model statement is `Y ~ G2 + G1 + G1:G2`, 
+  we get `r save` as the sum of squares associated with $G_2$. 
+    
+  This number is not greatly different from the original value we stated.  So, the proportion of variation in $Y$ 
+  that is due to the effects of $G_2$ must not be greatly overlapping with the proportion of 
+  variation that $G_1$ explains. 
+
+```{r testing sum of squares difference, eval = F}
+
+# calculate the SSR for G1 and reference the ANOVA table 
+round((mean(FG2[FG2$G1 == '0',]$Y) - mean(FG2$Y))^2 * nrow(FG2[FG2$G1 == "0", ])+ 
+  
+  (mean(FG2[FG2$G1 == '1',]$Y) - mean(FG2$Y))^2 * nrow(FG2[FG2$G1 == "1", ]) + 
+  
+  (mean(FG2[FG2$G1 == '2',]$Y) - mean(FG2$Y))^2 * nrow(FG2[FG2$G1 == "2", ]), 2)
+
+# calcualte total sum of squares and verify that the 
+
+anova(m1) %>% summarize(sum(`Sum Sq` )) ==  # sum of sums of squares from the anova table 
+
+sum(
+  (
+    FG2$Y - mean(FG2$Y) # total sum of squares from the data set 
+  )^2
+)
+
+```
+
+* The interaction sum of squares measures the variability of the estimated interactions for all combination of 
+treatments, after adjusting for the main effects of $G_1$ adn $G_2$. Since the mean of all estimated interactions is zero, the deviations of the estimated interactions around their mean is not explicitly shown. This sum of squares show how strong, or big the interactions between $G_1$ and 
+$G_2$ levels are. As we saw previously on Figure \@ref(fig:treatments), the main interaction of $G_1$ levels occurs with the $G_2$ level 2. 
+
+However, those groups have an extremely small sample size, which reduces the power of statistical 
+tests involved in the detection of these effects. 
+
+We will show more tests and formulate these ideas more rigorously in the later sections of this assignments. 
+
+# Problem 4. (8 points) 
+
+Provide visualizations that investigate the assumption of equal variances and the assumption of normality of the errors. Under the model assumed in question 2, conduct the Levene test to assess the equal variances assumption. Make sure to explicitly write the null and alternative hypotheses in clear statistical notation. 
+
+## Problem 4 Solution. 
+
+We begin this assignment with the investigation of normality of errors. We will look at the studentized residuals 
+to focus on the shape and quantiles of residuals' distribution. 
+
+We will look at the 
+
+```{r, include = F}
+
+FG2$residuals <- studres(m1)
+
+th <- qqnorm(FG2$residuals)$x
+
+cor_1 <- cor(th, FG2$residuals)
+```
+
+```{r qqresiduals, fig.cap = "No evidence of deviation of residuals from normality. Approximately normal distribution of the sample measurements and absence of outliers contribute to approximately normal distribution of residuals."}
+
+
+ggplot(data = FG2, 
+       aes(sample = residuals)) + 
+
+  stat_qq() + 
+  stat_qq_line(color = "red", size = 1) + 
+  theme_minimal() + 
+  
+  xlab("Observed Quantiles of Studentized Residuals") + 
+  ylab("Corresponding Theoretical Quantiles \nof a Normal Distribution") + 
+  
+  ggtitle(
+    paste0(
+      "QQ-normal plot for Studentized residuals. \n Correlation between observed and theoretical quantiles: ", 
+      round(cor_1, 5)
+    )
+  )
+
+```
+
+Figure \@ref(fig:qqresiduals) suggests that the distribution of residuals for the entire sample is strongly approximately normal. 
+There are no extremely strong outliers and heavy tails, so we will not investigate each subgroup and each combinations 
+of levels of $G_1$ and $G_2$. We can continue validation of the model and assess variance of residuals. 
+
+We continue assessment of residuals by looking at the variance of studentized residuals in each treatment combination group. This figure is conceptually similar to Figure \@ref(fig:composite), 
+however, Figure \@ref(fig:composite-n) orders groups by their sample size instead of means. 
+
+We now have a group with the smallest sample size on the left, and the greatest sample size on the 
+right. This arrangement allows us to compare variance of residuals in groups with similar sample 
+sizes, and shows how variance of residuals is affected by a changing sample size. 
+
+Based on visual evidence, we can anticipate that Levine test will suggest that the variances are 
+not equal. However, I do not anticipate that there will be a statistically significant result of 
+the test. In addition, there are no visible outliers that potentially can affect Levine test that 
+relies on the absolute deviations of each residual with the mean-residual in each group. 
+
+```{r composite-n, fig.cap = "Groups are ordered by sample size. As we go from left to right, the sample increases"}
+
+FG2$G_composite <- factor(FG2$G_composite, 
+                          levels = 
+                            unique(
+                              FG2 %>% 
+                                group_by(G_composite) %>% 
+                                summarize(N = n()) %>% 
+                                arrange(N)
+                            )$G_composite
+                            )
+
+ggplot(data = FG2, 
+       aes(x = G_composite, 
+           y = residuals, 
+           color = G_composite)) +
+  geom_boxplot(show.legend = F) +  # show.legend usually removes legend from the right side of the plot, but not in this instance??? 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45), 
+        legend.position = 'none')  + # this removes legend from the left hand side 
+  geom_jitter(alpha = alpha_level) + 
+  
+  xlab("Specific Analysis Buckets") + 
+  ylab("Studentized Residuals")
+
+
+```
+
+*Levene Test* 
+
+We consider absolute deviations $Z_{ij} = |Y_{ij} - \bar \mu_{ij}|$, and we perform a two-factor ANOVA with no interaction term using $Z_{ij}$ as a response variable. Test hypotheses and 
+results are given below: 
+
+*   $H_0: \sigma^2_1 = \sigma^2_2 = \dots = \sigma^2_9$
+
+*   $H_a:$ at least one $\sigma^2_i$ is not equal to the rest of $\sigma^2_j$'s
+
+*   Tests Results are given below in the table: 
+
+```{r levine}
+
+leveneTest(m1) %>% 
+  kable(booktabs = T, align = 'c', 
+        digits = 2, 
+        caption = "Resuts of Levine test for variance equality between groups") %>% 
+  kable_styling(latex_options = c("striped", "condensed", "hold_position"))
+
+df_1 <- leveneTest(m1)$Df[1]
+
+df_2 <- leveneTest(m1)$Df[2]
+
+F_val <- leveneTest(m1)$`F value`[1]
+
+Cutoff_F_val <- qf(p = .05, lower.tail = F, df1 = df_1, df2 = df_2)
+
+P_val <- round(leveneTest(m1)$`Pr(>F)`[1], 4)
+
+
+```
+
+*   $F$-statistic: `r round(F_val,4)` under `r df_1` and `r df_2` degrees of freedom
+
+*   Cutoff $F^*$-statistic: `r round(Cutoff_F_val,4)` under `r df_1` and `r df_2` degrees of freedom
+
+*   P($F > F^*$ ) = `r round(P_val, 4)`
+
+* Conclusion: p-value is grater than the accepted significance level $\alpha = 0.05$, 
+  so we fail to reject the null hypothesis. There is not enough evidence to conclude 
+  that there is significant difference between variance of residuals between the nine groups.
+    
+  Therefore, results of further F-tests should be reliable. 
+    
+# Problem  5. (5 points) 
+
+Conduct a statistical test to determine whether the interaction of $G_1$ and $G_2$ has any impact on the mean response. What is the conclusion and how does that impact how you would model resting glucose level?
+
+## Problem 5 Solution. 
+
+
+Test hypotheses and results are given below: 
+
+*   $H_0: (\alpha \beta)_{ij} = 0$ for all $i$, $j$
+
+*   $H_a:$ at least one term $(\alpha \beta)_{ij}$ is not zero
+
+*   We refer to Table \@ref(tab:anova1) for test statistics. Only two rows that are relevant 
+    to the test are given below: 
+  
+```{r anova2}
+anova(m1) %>% 
+  filter(rownames(anova(m1)) %in% c("G1:G2", "Residuals")) %>% 
+  kable(booktabs = T, align = c('l', rep('c', (length(anova(m1))-1))), 
+        caption = 'Test statistics for interaction term testing. 
+                    ANOVA Table for a two-factor cell means model', 
+        digits = 2,  # whoooooa, this rounds every numeric value to 2 digits to the right from a decimal point right away 
+        col.names = c("DF", "Sum of Squares", "Mean Sum of Squared", "F-value", "P-value")) %>% 
+  kable_styling(latex_options = c("striped", "condensed", "HOLD_position")) 
+
+F_stat <- anova(m1) %>% 
+  filter(rownames(anova(m1)) %in% c("G1:G2")) %>% select(`F value`)
+
+P_stat <- anova(m1) %>% 
+  filter(rownames(anova(m1)) %in% c("G1:G2")) %>% select(`Pr(>F)`)
+
+df_1 <- anova(m1) %>% 
+  filter(rownames(anova(m1)) %in% c("G1:G2")) %>% select(`Df`)
+
+df_1 <- as.numeric(df_1)
+
+df_2 <- anova(m1) %>% 
+  filter(rownames(anova(m1)) %in% c("Residuals")) %>% select(`Df`)
+
+df_2 <- as.numeric(df_2)
+
+Cutoff_F_val <- qf(p = .05, lower.tail = F, df1 = df_1, df2 = df_2)
+```
+
+*   $F$-statistic: `r round(F_stat,4)` under `r df_1` and `r df_2` degrees of freedom
+
+*   Cutoff $F^*$-statistic: `r round(Cutoff_F_val,4)` under `r df_1` and `r df_2` degrees of freedom
+
+*   P($F > F^*$ ) = `r round(P_stat, 4)`
+
+* Conclusion: p-value is grater than the accepted significance level $\alpha = 0.05$, 
+  so we fail to reject the null hypothesis. There is not enough evidence to conclude 
+  that all interactions terms are statistically different from zero. 
+    
+  This p-value is quite close to 0.05, so perhaps is it suggestive that there are some 
+  statistically significant interactions, but most should be in fact non-significant. 
+    
+  As we saw on Figure \@ref(fig:treatments), there are visually interacting levels. 
+  Perhaps, as pairwise comparisons can reveal which levels are the most different.
+
+
+# Problem  6. (8 points) 
+Use the Tukey and Bonferroni tests to compare all pairwise comparisons of the 9 cell means. Describe and explain any differences in findings between the two approaches. What do the conclusions about the pairwise comparisons tell you about the relationship between $G_1$, $G_2$, and $Y$ ?
+
+## Problem 6 Solution. 
+
+We begin by looking at pairwise comparisons using Tukey Procedure for multiple comparisons 
+adjustments. Generally, a total number of comparisons is given by $N_{groups} \times (N_{groups} - 1)$ / $2$. Therefore, we have a total of `r length(unique(FG2$G_Composite)) * (length(unique(FG2$G_Composite))-1)/2`. Due to an extremely large number of comparisons, 
+we will print only those comparisons that are significant at the Family wise significance level 0.05.
+
+```{r}
+FG2$G1_descr = factor(paste("G1 Level", FG2$G1))
+FG2$G2_descr = factor(paste("G2 Level", FG2$G2))
+
+m1 <- lm(Y ~ G1_descr*G2_descr, data = FG2)
+```
+
+Table \@ref(tab:tukey) shows all statistically significant pairwise comparisons: 
+
+```{r tukey}
+
+emmeans_list <- emmeans(m1, c("G1_descr", "G2_descr"), adjust = "tukey")
+
+pairs(emmeans_list, adjust = "tukey") %>% 
+  data.frame() %>% 
+  select(contrast, estimate, SE, p.value) %>% 
+  filter(`p.value` < 0.05) %>% 
+  # "contrast" "estimate" "SE"       "df"       "t.ratio"  "p.value" 
+
+  kable(booktabs = T, 
+        align = 'c', 
+        digits = 3, 
+        caption = "Significant Tukey-adjusted pairwise comparisons", 
+        col.names = c("Contrast", "Est. difference", "Estimate standard error", "P-Value")
+        ) %>% 
+  kable_styling(latex_options = c('striped', "condensed", "hold_position"))
+
+comment_1 <- pairs(emmeans_list, adjust = "tukey") %>% 
+  data.frame() %>% 
+  filter(`p.value` < 0.05 & contrast == "G1 Level 1 G2 Level 0 - G1 Level 1 G2 Level 1") %>%
+  select(estimate)
+  
+```
+
+
+Figure \@ref(fig:pairwise-tukey) show statistically significant comparisons, as well as all other 
+comparisons. We can see that there are a lot of comparisons where p-value is extremely close to 1. 
+
+```{r pairwise-tukey, fig.cap="Red line is significance cutoff"}
+
+pwpp(emmeans_list, comparisons = TRUE, adjust = "tukey")   + 
+  ylab("G1 and G2 levels") + 
+  xlab("Estiamted Means") + 
+  theme_minimal() + 
+  geom_vline(xintercept = 0.05, color = "red", size = 2, linetype = "dashed")
+
+```
+
+
+Table \@ref(tab:tukey) and Figure \@ref(fig:pairwise-tukey) tell us following information: 
+
+* Some patients in $G_1$ level 1 have varying average response  for different levels of $G_2$. 
+  The average response for patients in $G_1$ level 1 and $G_2$ level 0 is `r round(comment_1, 4)`
+  units greater than the average response for patients in $G_1$ Level 0 $G_2$ Level 1. 
+
+```{r, eval = F}
+pairs(emmeans_list, adjust = "bonferroni")
+
+pairs(emmeans_list, adjust = "bonferroni") %>% 
+  data.frame() %>% 
+  filter(`p.value` < 0.05)
+```
+
+
+
