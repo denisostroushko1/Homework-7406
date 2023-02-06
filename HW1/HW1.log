@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.7.5)  4 FEB 2023 15:43
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.7.5)  5 FEB 2023 20:20
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -717,36 +717,66 @@ LaTeX Warning: `!h' float specifier changed to `!ht'.
 File: HW1_files/figure-latex/pairwise-tukey-1.pdf Graphic file (type pdf)
 <use HW1_files/figure-latex/pairwise-tukey-1.pdf>
 Package pdftex.def Info: HW1_files/figure-latex/pairwise-tukey-1.pdf  used on i
-nput line 531.
+nput line 533.
 (pdftex.def)             Requested size: 469.75583pt x 249.14174pt.
-[10] [11 <./HW1_files/figure-latex/pairwise-tukey-1.pdf>] [12] [13] (./HW1.aux)
- ) 
+[10]
+<HW1_files/figure-latex/comp-1-1.pdf, id=189, 489.83pt x 277.035pt>
+File: HW1_files/figure-latex/comp-1-1.pdf Graphic file (type pdf)
+<use HW1_files/figure-latex/comp-1-1.pdf>
+Package pdftex.def Info: HW1_files/figure-latex/comp-1-1.pdf  used on input lin
+e 556.
+(pdftex.def)             Requested size: 469.76805pt x 265.68848pt.
+[11 <./HW1_files/figure-latex/pairwise-tukey-1.pdf>]
+<HW1_files/figure-latex/comp-2-1.pdf, id=202, 489.83pt x 277.035pt>
+File: HW1_files/figure-latex/comp-2-1.pdf Graphic file (type pdf)
+<use HW1_files/figure-latex/comp-2-1.pdf>
+Package pdftex.def Info: HW1_files/figure-latex/comp-2-1.pdf  used on input lin
+e 571.
+(pdftex.def)             Requested size: 469.76805pt x 265.68848pt.
+<HW1_files/figure-latex/comp-3-1.pdf, id=203, 489.83pt x 277.035pt>
+File: HW1_files/figure-latex/comp-3-1.pdf Graphic file (type pdf)
+<use HW1_files/figure-latex/comp-3-1.pdf>
+Package pdftex.def Info: HW1_files/figure-latex/comp-3-1.pdf  used on input lin
+e 586.
+(pdftex.def)             Requested size: 469.76805pt x 265.68848pt.
+[12 <./HW1_files/figure-latex/comp-1-1.pdf> <./HW1_files/figure-latex/comp-2-1.
+pdf>]
+<HW1_files/figure-latex/pairwise-bonf-1.pdf, id=225, 495.8525pt x 262.9825pt>
+File: HW1_files/figure-latex/pairwise-bonf-1.pdf Graphic file (type pdf)
+<use HW1_files/figure-latex/pairwise-bonf-1.pdf>
+Package pdftex.def Info: HW1_files/figure-latex/pairwise-bonf-1.pdf  used on in
+put line 619.
+(pdftex.def)             Requested size: 469.75583pt x 249.14174pt.
+[13 <./HW1_files/figure-latex/comp-3-1.pdf>] [14 <./HW1_files/figure-latex/pair
+wise-bonf-1.pdf>] (./HW1.aux) ) 
 Here is how much of TeX's memory you used:
- 15326 strings out of 478268
- 246531 string characters out of 5846348
- 581460 words of memory out of 5000000
- 33081 multiletter control sequences out of 15000+600000
- 521293 words of font info for 124 fonts, out of 8000000 for 9000
+ 15384 strings out of 478268
+ 248248 string characters out of 5846348
+ 578712 words of memory out of 5000000
+ 33120 multiletter control sequences out of 15000+600000
+ 524642 words of font info for 129 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 74i,9n,77p,1000b,626s stack positions out of 10000i,1000n,20000p,200000b,200000s
-{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}{/usr/lo
-cal/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}{/usr/local/texlive/20
-22/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/local/texlive/2022/texmf-dist
-/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc
-/dvips/lm/lm-rm.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/l
-mbx12.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lmmi10.pfb>
-</usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lmmi7.pfb></usr/local
-/texlive/2022/texmf-dist/fonts/type1/public/lm/lmr10.pfb></usr/local/texlive/20
-22/texmf-dist/fonts/type1/public/lm/lmr12.pfb></usr/local/texlive/2022/texmf-di
-st/fonts/type1/public/lm/lmr17.pfb></usr/local/texlive/2022/texmf-dist/fonts/ty
-pe1/public/lm/lmr7.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/l
-m/lmri10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lmsy10.p
-fb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lmsy7.pfb></usr/lo
-cal/texlive/2022/texmf-dist/fonts/type1/public/lm/lmtt10.pfb>
-Output written on HW1.pdf (13 pages, 553129 bytes).
+ 74i,9n,77p,1000b,411s stack positions out of 10000i,1000n,20000p,200000b,200000s
+{/usr/local/texlive/2022/texmf-dist/fonts/enc/dv
+ips/lm/lm-ec.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-math
+sy.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/
+local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/local/texl
+ive/2022/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}</usr/local/texlive/2022/texmf
+-dist/fonts/type1/public/lm/lmbx10.pfb></usr/local/texlive/2022/texmf-dist/font
+s/type1/public/lm/lmbx12.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/pu
+blic/lm/lmmi10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lm
+mi7.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lmr10.pfb></u
+sr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lmr12.pfb></usr/local/te
+xlive/2022/texmf-dist/fonts/type1/public/lm/lmr17.pfb></usr/local/texlive/2022/
+texmf-dist/fonts/type1/public/lm/lmr7.pfb></usr/local/texlive/2022/texmf-dist/f
+onts/type1/public/lm/lmri10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1
+/public/lm/lmsy10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm
+/lmsy7.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lmtt10.pfb
+>
+Output written on HW1.pdf (14 pages, 595459 bytes).
 PDF statistics:
- 313 PDF objects out of 1000 (max. 8388607)
- 247 compressed objects within 3 object streams
- 54 named destinations out of 1000 (max. 500000)
- 28809 words of extra memory for PDF output out of 29859 (max. 10000000)
+ 364 PDF objects out of 1000 (max. 8388607)
+ 283 compressed objects within 3 object streams
+ 60 named destinations out of 1000 (max. 500000)
+ 30877 words of extra memory for PDF output out of 35830 (max. 10000000)
 

@@ -263,8 +263,9 @@ FG2 %>%
   summarize(N = n(), 
             mean = mean(Y)) %>% 
   
-  mutate(G1 = as.numeric(G1) - 1 ) %>% 
+  mutate(G1 = as.numeric(G1) - 1 ) -> means_data 
 
+means_data %>% 
   ggplot(aes(x = G1, 
              y = mean)) + 
   
@@ -284,8 +285,9 @@ FG2 %>%
   
   xlab("levels of G1") + 
   ylab("Average Fasting Glucose Measurement") + 
-  ggtitle("Average Glucose Levels")
+  ggtitle("Average Glucose Levels") -> treatment_plot
   
+treatment_plot
 ```
 
 # Problem 2. (8 points) 
@@ -651,6 +653,8 @@ Use the Tukey and Bonferroni tests to compare all pairwise comparisons of the 9 
 
 ## Problem 6 Solution. 
 
+**Tukey** 
+
 We begin by looking at pairwise comparisons using Tukey Procedure for multiple comparisons 
 adjustments. Generally, a total number of comparisons is given by $N_{groups} \times (N_{groups} - 1)$ / $2$. Therefore, we have a total of `r length(unique(FG2$G_Composite)) * (length(unique(FG2$G_Composite))-1)/2`. Due to an extremely large number of comparisons, 
 we will print only those comparisons that are significant at the Family wise significance level 0.05.
@@ -682,18 +686,65 @@ pairs(emmeans_list, adjust = "tukey") %>%
         ) %>% 
   kable_styling(latex_options = c('striped', "condensed", "hold_position"))
 
-comment_1 <- pairs(emmeans_list, adjust = "tukey") %>% 
-  data.frame() %>% 
-  filter(`p.value` < 0.05 & contrast == "G1 Level 1 G2 Level 0 - G1 Level 1 G2 Level 1") %>%
-  select(estimate)
-  
 ```
 
+```{r saving tukey estimates for comments }
+comment_1_est <- 
+  pairs(emmeans_list, adjust = "tukey") %>% 
+  data.frame() %>% 
+  filter(`p.value` < 0.05 & contrast == "G1 Level 2 G2 Level 0 - G1 Level 1 G2 Level 1") %>%
+  select(estimate) %>% 
+  round(.,4)
+  
+confint(pairs(emmeans_list, adjust = "tukey")) %>% # wrapping confint around pairs command creates a table with a 95% confidence interval lower and upper bounds, but does not include p value in the table 
+  data.frame() %>% 
+  filter(contrast == "G1 Level 2 G2 Level 0 - G1 Level 1 G2 Level 1") %>% 
+  select(lower.CL, upper.CL) %>% 
+  round(.,4) -> comment_1_ci_raw
 
+comment_1_ci <- paste0("(", comment_1_ci_raw[1], ", ", comment_1_ci_raw[2], ")")
+
+###############################################################
+###############################################################
+
+comment_2_est <- 
+  pairs(emmeans_list, adjust = "tukey") %>% 
+  data.frame() %>% 
+  filter(`p.value` < 0.05 & contrast == "G1 Level 1 G2 Level 0 - G1 Level 1 G2 Level 1") %>%
+  select(estimate) %>% 
+  round(.,4)
+  
+confint(pairs(emmeans_list, adjust = "tukey")) %>% 
+  data.frame() %>% 
+  filter(contrast == "G1 Level 1 G2 Level 0 - G1 Level 1 G2 Level 1") %>% 
+  select(lower.CL, upper.CL) %>% 
+  round(.,4) -> comment_2_ci_raw
+
+comment_2_ci <- paste0("(", comment_2_ci_raw[1], ", ", comment_2_ci_raw[2], ")")
+
+###############################################################
+###############################################################
+
+comment_3_est <- 
+  pairs(emmeans_list, adjust = "tukey") %>% 
+  data.frame() %>% 
+  filter(`p.value` < 0.05 & contrast == "G1 Level 1 G2 Level 0 - G1 Level 1 G2 Level 1") %>%
+  select(estimate) %>% 
+  round(.,4)
+  
+confint(pairs(emmeans_list, adjust = "tukey")) %>% 
+  data.frame() %>% 
+  filter(contrast == "G1 Level 2 G2 Level 0 - G1 Level 0 G2 Level 1") %>% 
+  select(lower.CL, upper.CL) %>% 
+  round(.,4) -> comment_3_ci_raw
+
+comment_3_ci <- paste0("(", comment_3_ci_raw[1], ", ", comment_3_ci_raw[2], ")")
+
+```
 Figure \@ref(fig:pairwise-tukey) show statistically significant comparisons, as well as all other 
 comparisons. We can see that there are a lot of comparisons where p-value is extremely close to 1. 
 
-```{r pairwise-tukey, fig.cap="Red line is significance cutoff"}
+```{r pairwise-tukey, fig.cap="Red line is significance cutoff at 0.05 level"}
 
 pwpp(emmeans_list, comparisons = TRUE, adjust = "tukey")   + 
   ylab("G1 and G2 levels") + 
@@ -706,16 +757,104 @@ pwpp(emmeans_list, comparisons = TRUE, adjust = "tukey")   +
 
 Table \@ref(tab:tukey) and Figure \@ref(fig:pairwise-tukey) tell us following information: 
 
-* Some patients in $G_1$ level 1 have varying average response  for different levels of $G_2$. 
-  The average response for patients in $G_1$ level 1 and $G_2$ level 0 is `r round(comment_1, 4)`
-  units greater than the average response for patients in $G_1$ Level 0 $G_2$ Level 1. 
+* Patients in with $G_1$ level 2 and $G_2$ level 0 has the largest average response when compared with other 
+groups. In particular, Tukey-adjusted pairwise comparisons detected three statistically significant 
+differences. 
 
-```{r, eval = F}
-pairs(emmeans_list, adjust = "bonferroni")
+* Members with $G_1$ level 2 and $G_2$ level 0 on average had `r comment_1_est` more log- millimoles per liter fasting glucose levels, bounded by a `r comment_1_ci` 95% confidence interval,
+when compared with with $G_1$ level 1 and $G_2$ level 1 group. 
+Due to the use of Tukey adjustment procedure this interval is quite wise. 
+Figure \@ref(fig:comp-1) highlights two means that are subject to this comparison. 
+
+```{r comp-1, fig.cap="Caption" }
+
+treatment_plot +
+  geom_point(
+    data = means_data %>% filter(
+      (G1 == 2 & G2 == 0) | 
+        (G1 == 1 & G2 == 1)
+    ), 
+    aes(x = G1, y = mean), 
+    color = "black",
+    shape = 1, 
+    size = 5,
+    stroke = 2
+    )
+
+```
+
+* Bla bla 
+
+```{r comp-2, fig.cap="Caption" }
+treatment_plot +
+  geom_point(
+    data = means_data %>% filter(
+      (G1 == 1 & G2 == 0) | 
+        (G1 == 1 & G2 == 1)
+    ), 
+    aes(x = G1, y = mean), 
+    color = "black",
+    shape = 1, 
+    size = 5,
+    stroke = 2
+    )
+```
+
+* Bla bla 
+
+```{r comp-3, fig.cap="Caption" }
+treatment_plot +
+  geom_point(
+    data = means_data %>% filter(
+      (G1 == 2 & G2 == 0) | 
+        (G1 == 0 & G2 == 1)
+    ), 
+    aes(x = G1, y = mean), 
+    color = "black",
+    shape = 1, 
+    size = 5,
+    stroke = 2
+    )
+```
+
+make a comment about difference of G1 level 2 - level 0 given that we are in G2 kevek 0
+
+**Bonferroni**
+
+Table \@ref(tab:bonf) shows all statistically significant pairwise comparisons: 
+
+```{r bonf}
+
+emmeans_list <- emmeans(m1, c("G1_descr", "G2_descr"), adjust = "bonferroni")
 
 pairs(emmeans_list, adjust = "bonferroni") %>% 
   data.frame() %>% 
-  filter(`p.value` < 0.05)
+  select(contrast, estimate, SE, p.value) %>% 
+  filter(`p.value` < 0.06) %>% # filter a table to less than 0.06 because there is one comparison with 0.051 p-val
+  
+  kable(booktabs = T, 
+        align = 'c', 
+        digits = 3, 
+        caption = "Significant Bonferroni-adjusted pairwise comparisons", 
+        col.names = c("Contrast", "Est. difference", "Estimate standard error", "P-Value")
+        ) %>% 
+  kable_styling(latex_options = c('striped', "condensed", "hold_position"))
+
+  
+```
+
+
+Figure \@ref(fig:pairwise-bonf) show statistically significant comparisons, as well as all other 
+comparisons. We can see that there are a lot of comparisons where p-value is extremely close to 1. 
+
+```{r pairwise-bonf, fig.cap="Red line is significance cutoff at 0.05 level"}
+
+pwpp(emmeans_list, comparisons = TRUE, adjust = "bonferroni")   + 
+  ylab("G1 and G2 levels") + 
+  xlab("Estiamted Means") + 
+  theme_minimal() + 
+  geom_vline(xintercept = 0.05, color = "red", size = 2, linetype = "dashed")
+
 ```
 
 
