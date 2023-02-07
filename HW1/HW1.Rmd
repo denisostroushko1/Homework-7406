@@ -290,6 +290,14 @@ means_data %>%
 treatment_plot
 ```
 
+**Part 1 Conclusions:**
+
+1. We have large sample sizes for groups, while the means appear quite different. 
+So, the effects may be small, but the sample size may help detect statistically significant differences when running a two-way ANOVA test. 
+
+2. There are no outliers, and the distributions of data in each analysis bucket 
+appear quite symmetrical. 
+
 # Problem 2. (8 points) 
 
 Write down a two-factor ANOVA model using $G_1$ and $G_2$ and their interaction to explain the variation in the fasting glucose level. Define any notation you use and list all assumptions that are made by this model.
@@ -349,7 +357,7 @@ finally we will look at the interaction term sum of squares.
 
 ```{r anova1}
 
-anova(m1) %>% 
+anova(m1 ) %>% 
   kable(booktabs = T, align = c('l', rep('c', (length(anova(m1))-1))), 
         caption = 'ANOVA Table for a two-factor cell means model', 
         digits = 2,  # whoooooa, this rounds every numeric value to 2 digits to the right from a decimal point right away 
@@ -450,10 +458,10 @@ sum(
 * The interaction sum of squares measures the variability of the estimated interactions for all combination of 
 treatments, after adjusting for the main effects of $G_1$ adn $G_2$. Since the mean of all estimated interactions is zero, the deviations of the estimated interactions around their mean is not explicitly shown. This sum of squares show how strong, or big the interactions between $G_1$ and 
 $G_2$ levels are. As we saw previously on Figure \@ref(fig:treatments), the main interaction of $G_1$ levels occurs with the $G_2$ level 2. 
-
-However, those groups have an extremely small sample size, which reduces the power of statistical 
-tests involved in the detection of these effects. 
-
+  
+  However, those groups have an extremely small sample size, which reduces the power of statistical 
+  tests involved in the detection of these effects. 
+  
 We will show more tests and formulate these ideas more rigorously in the later sections of this assignments. 
 
 # Problem 4. (8 points) 
@@ -464,8 +472,6 @@ Provide visualizations that investigate the assumption of equal variances and th
 
 We begin this assignment with the investigation of normality of errors. We will look at the studentized residuals 
 to focus on the shape and quantiles of residuals' distribution. 
-
-We will look at the 
 
 ```{r, include = F}
 
@@ -765,8 +771,12 @@ differences.
 when compared with with $G_1$ level 1 and $G_2$ level 1 group. 
 Due to the use of Tukey adjustment procedure this interval is quite wise. 
 Figure \@ref(fig:comp-1) highlights two means that are subject to this comparison. 
+  
+  In conclusion, using visual evidence and model estimates, we can conclude that patients in 
+  level 2 of $G_1$ have a higher average response than those in level 1 of $G_1$, and 
+  being in $G_2$ level 0 increases the average response even further. 
 
-```{r comp-1, fig.cap="Caption" }
+```{r comp-1, fig.cap="Highligthed means are subject to comparison" }
 
 treatment_plot +
   geom_point(
@@ -783,9 +793,14 @@ treatment_plot +
 
 ```
 
-* Bla bla 
+* Members with $G_1$ level 1 and $G_2$ level 0 on average had `r comment_2_est` more log- millimoles per liter fasting glucose levels, bounded by a `r comment_2_ci` 95% confidence interval,
+when compared with with $G_1$ level 1 and $G_2$ level 1 group. 
+Figure \@ref(fig:comp-2) highlights two means that are subject to this comparison. 
+  
+  In conclusion, using visual evidence and model estimates, holding $G_1$ constant at level 1, being in level 0 of $G_2$ for a patient as opposed to level 1
+  increases the average response measurement of $Y$. 
 
-```{r comp-2, fig.cap="Caption" }
+```{r comp-2, fig.cap="Highligthed means are subject to comparison" }
 treatment_plot +
   geom_point(
     data = means_data %>% filter(
@@ -800,9 +815,15 @@ treatment_plot +
     )
 ```
 
-* Bla bla 
+* Members with $G_1$ level 2 and $G_2$ level 0 on average had `r comment_3_est` more log- millimoles per liter fasting glucose levels, bounded by a `r comment_3_ci` 95% confidence interval,
+when compared with with $G_1$ level 0 and $G_2$ level 1 group. 
+Figure \@ref(fig:comp-3) highlights two means that are subject to this comparison. 
 
-```{r comp-3, fig.cap="Caption" }
+  In conclusion, using visual evidence and model estimates, we can conclude that patients in 
+  level 2 of $G_1$ have a higher average response than those in level 0 of $G_1$, and 
+  being in $G_2$ level 0, when compared to level 1, increases the average response even further. 
+
+```{r comp-3, fig.cap="Highligthed means are subject to comparison" }
 treatment_plot +
   geom_point(
     data = means_data %>% filter(
@@ -817,11 +838,14 @@ treatment_plot +
     )
 ```
 
-make a comment about difference of G1 level 2 - level 0 given that we are in G2 kevek 0
-
 **Bonferroni**
 
-Table \@ref(tab:bonf) shows all statistically significant pairwise comparisons: 
+Table \@ref(tab:bonf) shows all statistically significant pairwise comparisons. We included one extra observation in the table that has a p-value for a pairwise 
+comparison that is greater than our defined cutoff. 
+
+As a result of a bonferroni adjustment procedure, we can see that the tests produce 
+identical results to the Tukey adjustment procedure, when it comes to the statistically 
+significant results. 
 
 ```{r bonf}
 
@@ -857,5 +881,23 @@ pwpp(emmeans_list, comparisons = TRUE, adjust = "bonferroni")   +
 
 ```
 
+**Part 8 conclusions:**
 
+1. Out of 36 pairwise comparisons, we detect 3 statistically significant and important 
+comparisons using both Tukey and Bonferroni adjustments. 
+
+2. Patients in level 0 of $G_1$ and level 0 of $G_2$ had a greater average 
+response than those patients in levels 0 and 1 of $G_1$ and level 1 of $G_2$. 
+
+3. When holding $G_2$ level 1 as constant, being in level 0 of $G_2$ increased the 
+average response when compared with level 1 of $G_2$. 
+
+4. We had visual confirmation that the average response for level 2 of $G_2$ had a 
+different trajectory over levels $G_1$ when compared with levels 0 and 1 of $G_2$, 
+which both had a very similar trajectory. 
+  
+  <!-- do not forger to indent the text after the line break so that it remains under the bullet point in the rendered document --> 
+  I speculate that if we had a bigger sample size for members who were in $G_2$ level 2, 
+  we probably would be able to declare the findings with higher confidence. 
+  For now, we can only say that the results are suggestive. 
 

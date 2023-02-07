@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.7.5)  5 FEB 2023 20:20
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.7.5)  6 FEB 2023 18:42
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -680,86 +680,86 @@ Package pdftex.def Info: HW1_files/figure-latex/treatments-1.pdf  used on input
  line 220.
 (pdftex.def)             Requested size: 469.76805pt x 265.68848pt.
 
-LaTeX Font Warning: Command \Large invalid in math mode on input line 240.
+LaTeX Font Warning: Command \Large invalid in math mode on input line 252.
 
 LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 2
-46.
+58.
 (/usr/local/texlive/2022/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [5 <./HW1_files/figure-latex/treatments-1.pdf>]
 
-LaTeX Font Warning: Command \Large invalid in math mode on input line 263.
+LaTeX Font Warning: Command \Large invalid in math mode on input line 275.
 
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 2
-89.
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 3
+01.
 (/usr/local/texlive/2022/texmf-dist/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [6]
-<HW1_files/figure-latex/qqresiduals-1.pdf, id=119, 495.8525pt x 277.035pt>
+<HW1_files/figure-latex/qqresiduals-1.pdf, id=122, 495.8525pt x 277.035pt>
 File: HW1_files/figure-latex/qqresiduals-1.pdf Graphic file (type pdf)
 <use HW1_files/figure-latex/qqresiduals-1.pdf>
 Package pdftex.def Info: HW1_files/figure-latex/qqresiduals-1.pdf  used on inpu
-t line 368.
+t line 378.
 (pdftex.def)             Requested size: 469.75583pt x 262.45467pt.
 [7]
-<HW1_files/figure-latex/composite-n-1.pdf, id=132, 495.8525pt x 279.0425pt>
+<HW1_files/figure-latex/composite-n-1.pdf, id=135, 495.8525pt x 279.0425pt>
 File: HW1_files/figure-latex/composite-n-1.pdf Graphic file (type pdf)
 <use HW1_files/figure-latex/composite-n-1.pdf>
 Package pdftex.def Info: HW1_files/figure-latex/composite-n-1.pdf  used on inpu
-t line 393.
+t line 403.
 (pdftex.def)             Requested size: 469.75583pt x 264.3565pt.
 [8 <./HW1_files/figure-latex/qqresiduals-1.pdf>] [9 <./HW1_files/figure-latex/c
 omposite-n-1.pdf>]
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-<HW1_files/figure-latex/pairwise-tukey-1.pdf, id=170, 495.8525pt x 262.9825pt>
+<HW1_files/figure-latex/pairwise-tukey-1.pdf, id=173, 495.8525pt x 262.9825pt>
 File: HW1_files/figure-latex/pairwise-tukey-1.pdf Graphic file (type pdf)
 <use HW1_files/figure-latex/pairwise-tukey-1.pdf>
 Package pdftex.def Info: HW1_files/figure-latex/pairwise-tukey-1.pdf  used on i
-nput line 533.
+nput line 543.
 (pdftex.def)             Requested size: 469.75583pt x 249.14174pt.
 [10]
-<HW1_files/figure-latex/comp-1-1.pdf, id=189, 489.83pt x 277.035pt>
+<HW1_files/figure-latex/comp-1-1.pdf, id=191, 489.83pt x 277.035pt>
 File: HW1_files/figure-latex/comp-1-1.pdf Graphic file (type pdf)
 <use HW1_files/figure-latex/comp-1-1.pdf>
 Package pdftex.def Info: HW1_files/figure-latex/comp-1-1.pdf  used on input lin
-e 556.
+e 570.
 (pdftex.def)             Requested size: 469.76805pt x 265.68848pt.
 [11 <./HW1_files/figure-latex/pairwise-tukey-1.pdf>]
-<HW1_files/figure-latex/comp-2-1.pdf, id=202, 489.83pt x 277.035pt>
+<HW1_files/figure-latex/comp-2-1.pdf, id=205, 489.83pt x 277.035pt>
 File: HW1_files/figure-latex/comp-2-1.pdf Graphic file (type pdf)
 <use HW1_files/figure-latex/comp-2-1.pdf>
 Package pdftex.def Info: HW1_files/figure-latex/comp-2-1.pdf  used on input lin
-e 571.
+e 589.
 (pdftex.def)             Requested size: 469.76805pt x 265.68848pt.
-<HW1_files/figure-latex/comp-3-1.pdf, id=203, 489.83pt x 277.035pt>
+[12 <./HW1_files/figure-latex/comp-1-1.pdf>]
+<HW1_files/figure-latex/comp-3-1.pdf, id=219, 489.83pt x 277.035pt>
 File: HW1_files/figure-latex/comp-3-1.pdf Graphic file (type pdf)
 <use HW1_files/figure-latex/comp-3-1.pdf>
 Package pdftex.def Info: HW1_files/figure-latex/comp-3-1.pdf  used on input lin
-e 586.
+e 609.
 (pdftex.def)             Requested size: 469.76805pt x 265.68848pt.
-[12 <./HW1_files/figure-latex/comp-1-1.pdf> <./HW1_files/figure-latex/comp-2-1.
-pdf>]
-<HW1_files/figure-latex/pairwise-bonf-1.pdf, id=225, 495.8525pt x 262.9825pt>
+[13 <./HW1_files/figure-latex/comp-2-1.pdf>]
+<HW1_files/figure-latex/pairwise-bonf-1.pdf, id=235, 495.8525pt x 262.9825pt>
 File: HW1_files/figure-latex/pairwise-bonf-1.pdf Graphic file (type pdf)
 <use HW1_files/figure-latex/pairwise-bonf-1.pdf>
 Package pdftex.def Info: HW1_files/figure-latex/pairwise-bonf-1.pdf  used on in
-put line 619.
+put line 645.
 (pdftex.def)             Requested size: 469.75583pt x 249.14174pt.
-[13 <./HW1_files/figure-latex/comp-3-1.pdf>] [14 <./HW1_files/figure-latex/pair
+[14 <./HW1_files/figure-latex/comp-3-1.pdf>] [15 <./HW1_files/figure-latex/pair
 wise-bonf-1.pdf>] (./HW1.aux) ) 
 Here is how much of TeX's memory you used:
- 15384 strings out of 478268
- 248248 string characters out of 5846348
- 578712 words of memory out of 5000000
+ 15393 strings out of 478268
+ 248313 string characters out of 5846348
+ 579820 words of memory out of 5000000
  33120 multiletter control sequences out of 15000+600000
- 524642 words of font info for 129 fonts, out of 8000000 for 9000
+ 524725 words of font info for 130 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 74i,9n,77p,1000b,411s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 74i,9n,77p,1000b,405s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/local/texlive/2022/texmf-dist/fonts/enc/dv
-ips/lm/lm-ec.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-math
-sy.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/
+ips/lm/lm-mathsy.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-
+ec.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/
 local/texlive/2022/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/local/texl
 ive/2022/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}</usr/local/texlive/2022/texmf
 -dist/fonts/type1/public/lm/lmbx10.pfb></usr/local/texlive/2022/texmf-dist/font
@@ -773,10 +773,10 @@ onts/type1/public/lm/lmri10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1
 /public/lm/lmsy10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm
 /lmsy7.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/lm/lmtt10.pfb
 >
-Output written on HW1.pdf (14 pages, 595459 bytes).
+Output written on HW1.pdf (15 pages, 601381 bytes).
 PDF statistics:
- 364 PDF objects out of 1000 (max. 8388607)
- 283 compressed objects within 3 object streams
- 60 named destinations out of 1000 (max. 500000)
+ 378 PDF objects out of 1000 (max. 8388607)
+ 296 compressed objects within 3 object streams
+ 67 named destinations out of 1000 (max. 500000)
  30877 words of extra memory for PDF output out of 35830 (max. 10000000)
 
