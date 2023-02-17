@@ -1,0 +1,66 @@
+---
+title: "Homework 2"
+author: "Denis Ostroushko"
+date: "`r Sys.Date()`"
+output: 
+  bookdown::pdf_document2:
+number_sections: FALSE
+toc: FALSE
+---
+
+```{r set up chunk, echo = F, include = F}
+
+knitr::opts_chunk$set(
+  echo = F,
+  message = F, 
+  warning = F,
+  fig.align = 'center',
+  fig.pos = "!H"
+)
+
+alpha_level = 0.33
+
+source("/Users/denisostroushko/Desktop/UofM MS/MS 2023 - 1 Spring/PUBH 7406/Homework-7406/Package master list .R")
+
+image_path <- "/Users/denisostroushko/Desktop/UofM MS/MS 2023 - 1 Spring/PUBH 7406/Homework-7406/HW2/problems from book /"
+
+```
+
+# Problem 1
+
+
+```{r}
+knitr::include_graphics(paste0(image_path, 'Problem 1 4.2a.png'))
+```
+
+
+
+# Problem 2
+
+For binary data, define a GLM using log link (define any notation you use). Show that the effects refer to the relative risk. Why do you think this link is not often used? (Hint: what happens if the linear predictor takes a positive value?)
+
+# Problem 3
+
+```{r}
+knitr::include_graphics(paste0(image_path, 'Problem 3 5.2 p1.png'))
+knitr::include_graphics(paste0(image_path, 'Problem 3 5.2 p2.png'))
+knitr::include_graphics(paste0(image_path, 'Problem 3 5.2 p3.png'))
+```
+
+# Problem 4
+
+```{r}
+knitr::include_graphics(paste0(image_path, 'Problem 4 5.14.png'))
+```
+
+# Problem 5
+
+```{r}
+knitr::include_graphics(paste0(image_path, 'Problem 5 5.18.png'))
+```
+
+# Problem 6
+
+```{r}
+knitr::include_graphics(paste0(image_path, 'Problem 6 5.34.png'))
+```
