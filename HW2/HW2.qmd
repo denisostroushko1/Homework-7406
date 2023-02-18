@@ -20,8 +20,6 @@ alpha_level = 0.33
 
 source("/Users/denisostroushko/Desktop/UofM MS/MS 2023 - 1 Spring/PUBH 7406/Homework-7406/Package master list .R")
 
-image_path <- "/Users/denisostroushko/Desktop/UofM MS/MS 2023 - 1 Spring/PUBH 7406/Homework-7406/HW2/problems from book /"
-
 ```
 
 
@@ -195,11 +193,93 @@ is not zero. Higher LI levels are positively associated with the chance of relap
 
 ### H 
 
+We can conduct a likelihood ratio test for the effect when we compare a model with 1 additional parameter against a model with just the intercept.
+
+1. Null hypothesis: $H_0: \hat \beta = 0$
+
+2. Alternative hypothesis: $H_a: \hat \beta \neq 0$
+
+3. Null deviance: 34.372, Residual deviance: 26.073, Test statistic is $X^2 =$ 34.372 - 26.073 = 8.299
+
+4. Degree of freedom = 1 due to one parameter subject to test 
+
+5. Cutoff for significance is the 95th percentile of a chi-square distribution with 1 degree of freedom: 
+`r round(qchisq(p = 0.95, df = 1), 4)`
+
+6. $P(\chi^2_1 > X^2)$ = `r round(pchisq(8.299, df = 1, lower.tail = F), 5)`. 
+
+7. We have enough statistical evidence to reject the null hypothesis and conclude that the estimate is 
+different from zero. The drop in deviance is large enough to conclude that the addition of LR levels as a 
+predictor is necessary to improve model fit. 
+
+### I 
+
 
 
 # Problem 4
 
 # Problem 5
+
+### A 
+
+```{r}
+get_std_err_from_ub <- 
+  function(or, or_ub){
+    
+    return(
+      (log(or_ub) - log(or))/1.96
+    )
+    
+  }
+
+get_std_err_from_lb <- 
+  function(or, or_lb){
+    
+    return(
+      (log(or) - log(or_lb))/1.96
+    )
+    
+  }
+```
+
+**Education Level**
+
+Group 0 = education none. Group 1 = education some 
+
+OR = 4.04 = $e^{\hat \beta}$, so Beta education some = log(4.04) = `r round(log(4.04),4)`
+
+Taking the log of the upper bound is all we need to find a standard error. upper bound on the fitted values 
+scale = `r round(log(13.9), 4)`, 
+
+Then, we take the difference between  `r round(log(13.9), 4)` and `r round(log(4.04),4)`, and divide it by 
+z-multiplier 1.96, so we get $\large \frac{2.6319 - 1.3962}{1.96} =$ `r round((2.6319 - 1.3962)/1.96,4)` as a standard error estimate. 
+
+Check that it matches the lower bound estimate as well 
+
+lower bound log = log(1.17) = `r round(log(1.17), 4)`
+
+Difference = log(4.04) - log(1.17) = `r round(log(4.04) - log(1.17), 4)`
+
+Divide by 1.96 and obtain `r round((log(4.04) - log(1.17))/1.96, 4)`
+
+We have a bit of a rounding error going on 
+
+**Gender** 
+
+Standard error from upper bound: `r get_std_err_from_ub(or = 1.38, or_ub = 12.88)`
+
+Standard error from lower bound: `r get_std_err_from_lb(or = 1.38, or_lb = 1.23)`
+
+Not equal, address in (b)
+
+### B 
+
+take 1.38 to be a log-odds ratio, so we need to exponentiate and then take the log again to get the right 
+estiamte
+
+So, calculating from the upper bound, we have `r get_std_err_from_ub(or = exp(1.38), or_ub = 12.88)`
+
+So, calculating from the lower bound, we have `r get_std_err_from_lb(or = exp(1.38), or_lb = 1.23)`
 
 # Problem 6
 
