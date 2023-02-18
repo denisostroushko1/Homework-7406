@@ -25,33 +25,31 @@ source("/Users/denisostroushko/Desktop/UofM MS/MS 2023 - 1 Spring/PUBH 7406/Home
 
 # Problem 1
 
-```{r}
+### A
 
-#| echo: true
+**Interpretation**
 
-intercept_b  <- 0.025
-intercept_se <- 0.0003
+The linear probability model with one predictor is given by a general equation $\hat \pi(x) = \hat \beta_0 + \hat \beta_1 * x$. Due to its simple form, the interpretation is straightforward. When x = 0, i.e. a person 
+consumes no alcohol, estimated probability of malformation is the intercept, which is 0.0025. 
 
-alc_b  <- 0.001087
-alc_se <- 0.000727
+A coefficient for alcohol consumption is 0.001087, meaning that each additional alcholic drink per day 
+increases the prbability of malformation by 0.001087. There are no other predictors in the model, so 
+we do not have anything to hold constant in this interpretation.
 
+**Relative Risk**
 
+We can use software output and obtain a fitted model: $\large P(Y = 1|x) = \hat \pi(x) = 0.0025 + 0.001087 *x$
 
-```
+Now we can use this model to estimate the probability of having an event when x = 0 and x = 7. 
 
-### 4.2 - A
+$\hat \pi(0) =$ 0.0025
 
-```{r}
+$\hat \pi(7) =$ 0.0025 + 0.001087 * 7 = `r round(0.0025 + 0.001087 * 7, 4)`
 
-df_problem_4.2 <- 
-  data.frame(
-    cat = c("0", "<1", "1-2", "3-5", ">=6"), 
-    count = c(17066 + 48, 14464 + 38, 788 + 5, 126 + 1, 37 + 1), 
-    events = c(48, 38, 5, 1, 1)
-  )
+Therefore, the relative risk is given by a ratio of fitted probabilities, which is 
+$\large \frac{\hat \pi(7)}{\hat \pi(0)} =$ `r round((0.0025 + 0.001087 * 7)/(0.0025),4)` 
 
-
-```
+### B 
 
 # Problem 2
 
@@ -73,13 +71,14 @@ $$\Large log(\pi_2) - log(\pi_1) = \hat \beta_0 + \hat \beta_1 * (x_1 + 1) + \do
 
 $$\Large \hat \beta_1 = log(\frac{\pi_2}{\pi_1}) $$
 
-Therefore, $$\Large \frac{\pi_2}{\pi_1} = e^{\hat\beta_1}$$. Taking the ratio instead of a difference of probabilities results in the relative comparison, therefore we evaluate relative risk here. 
+Therefore, $\Large \frac{\pi_2}{\pi_1} = e^{\hat\beta_1}$. Taking the ratio instead of a difference of probabilities results in the relative comparison, therefore we evaluate relative risk here. 
 
 We do not use this link function often because of the form that $\hat\pi(x)$ takes on. 
 $\hat\pi(x) = e^{\hat \beta_0 + \hat \beta_1 * (x_1 + 1) + \dots + \hat \beta_p * x_p}$ is a function that will 
 always be greater than 0 because of the properties of exponential function, but it is not limited by 1 on the 
 upped end. So, given the data, we can have a scenario where fitted probabilities are greater than 1, which 
 violates axioms of probability. 
+
 
 # Problem 3
 
@@ -99,9 +98,7 @@ $\Large \hat \pi =$ `r round(exp(-3.7771 + 0.1449 * 8)/(1 + exp(-3.7771 + 0.1449
 
 In this problem we will fix $\hat \pi$ at 0.5 and solve for LI. 
 
-$$\Large log(\frac{0.5/(1-0.5)}) = -3.7771 + 0.1449 * x =$$
-
-$$\Large \frac{log(\frac{0.5}{(1-0.5)}) + 3.7771}{0.1449} = x =>$$  
+$$\Large log(\frac{0.5}{1-0.5)}) = -3.7771 + 0.1449 * x =>  \frac{log(\frac{0.5}{(1-0.5)}) + 3.7771}{0.1449} = x =>$$  
 
 $\Large x =$ `r round((log(0.5/0.5) + 3.7771)/0.1449,4)` $\approx$ `r round((log(0.5/0.5) + 3.7771)/0.1449)`
 
@@ -143,12 +140,12 @@ In our problem, $\hat \beta_1$ = 0.1449, and so the odds ratio is $e^{0.1449}$ =
 
 ### F
 
-Odds ratio is a function of the model parameter $\hat \beta_1$. This parameter is an MLE estimates, so by the 
-variance property odds ratio is also an MLE. We know that MLE's are asymptotically normally distributed. 
+Odds ratio is a function of the model parameter $\hat \beta_1$. This parameter is an MLE estimate, so by the 
+invariance property, odds ratio is also an MLE. We know that MLE's are asymptotically normally distributed. 
 
 Therefore, we need to do the following steps to a confidence interval for odds ratio. 
 
-1. Get a 95% confidence interval for $\hat \beta_1$ using 1.96 - 97.5th quantile of the the standard normal distribution and a standard error, which we take from the model output. This is a Walk confidence interval. 
+1. Get a 95% confidence interval for $\hat \beta_1$ using 1.96 - 97.5th quantile of the the standard normal distribution and a standard error, which we take from the model output. This is a Wald confidence interval. 
 
 2. we exponentiate the lower limit of a 95% confidence interval, an odds ratio, and an upper limit. 
 
@@ -214,7 +211,85 @@ predictor is necessary to improve model fit.
 
 ### I 
 
+I decided to adopt an approach from page 30 of lecture notes for part one. I will first find a 
+standard error and a confidence interval for the linear predictor, 
+$\eta =  \vec x^T \hat \beta$. 
+Then we will use a logit function to map linear predictor and a 95% confidence interval to the 
+probability space. 
 
+**Variance of a linear predictor**
+
+Software output shows that the intercept and LI parameter are correlated, therefore, variance 
+of $\hat \beta_0 + \hat \beta_{LI} * LI$ is given by 
+
+$$\Large Var(\hat \beta_0 + \hat \beta_{LI} * LI) = Var(\hat \beta_0) + LI^2 * Var(\hat \beta_{LI}) + 2 * LI * Cov(\hat \beta_0, \hat \beta_{LI})$$
+
+A variance-covariance matrix shows that $Var(\hat \beta_{LI})$ = 0.003521, $Var(\hat \beta_{0})$
+= 1.900616, and $Cov(\hat \beta_0, \hat \beta_{LI})$ = -0.07653. 
+
+I will use functions in R to assist with calculations. Function below produces a linear 
+predictor given a set of model parameters: 
+
+```{r}
+#| echo: true
+
+# logit function for mapping to probability space 
+logit <- 
+  function(x){
+    exp(x)/(1+exp(x))
+  }
+
+# estimate linear combination of predictors 
+lin_predictor <- 
+  function(beta_0, beta_1, x){
+    beta_0 + beta_1 * x
+  }
+
+```
+
+We can confirm that when LI = 8, linear predictor $\hat \eta=$ 
+`r round(lin_predictor(beta_0 = -3.7771, beta_1 = .1449, x = 8), 4)`, and fitted probability is 
+$logit(\hat \eta)$ = `r round(logit(lin_predictor(beta_0 = -3.7771, beta_1 = .1449, x = 8)), 4)`,
+which matches our previous results.
+
+Now we can produce variance and standard error for the linear combination of predictors 
+
+```{r}
+#| echo: true
+
+# compute variance 
+var_lin_predictor <- 
+  function(beta_0, beta_0_var, 
+           beta_1, beta_1_var, 
+           cov, 
+           x){
+    return( 
+      beta_0_var + x^2 * beta_1_var + 2 * x * cov
+    )
+  }
+
+```
+
+```{r}
+eta = (lin_predictor(beta_0 = -3.7771, beta_1 = .1449, x = 8))
+
+var = var_lin_predictor(beta_0 = -3.7771, beta_0_var = 1.900616,beta_1 = 0.1449, beta_1_var = 0.003521, cov = -.07653, x= 8)
+```
+
+We estimate that variance of $\hat \eta$ =  is `r var_lin_predictor(beta_0 = -3.7771, beta_0_var = 1.900616,beta_1 = 0.1449, beta_1_var = 0.003521, cov = -.07653, x= 8)`
+
+So, when LI = 8, $\hat \eta$ = `r round(lin_predictor(beta_0 = -3.7771, beta_1 = .1449, x = 8), 4)`  with a (`r round(eta - 1.96*sqrt(var), 4)`, `r round(eta + 1.96 * sqrt(var), 4)`)
+95% confidence interval. 
+
+**Confidence interval of a fitted probability**
+
+Now, using a logit function, we can map these three estimates to the probability space. 
+
+Estiamted probability of relapse at LI = 8 is `r round(logit(eta), 4)`, bounded by the 
+(
+`r round(logit(eta - 1.96*sqrt(var)), 4)`,
+`r round(logit(eta + 1.96*sqrt(var)), 4)`
+) 95% confidence interval. 
 
 # Problem 4
 
@@ -222,7 +297,16 @@ predictor is necessary to improve model fit.
 
 ### A 
 
+We know that odds ratio = $e^{\hat \beta}$, therefore we need an inverse of this function 
+to get $\hat \beta$, i.e. $\hat \beta = log(Odds \ Ratio)$. 
+
+
+I will use code below to assit me in calculations: 
+
 ```{r}
+#| echo: true
+
+# some differnece 
 get_std_err_from_ub <- 
   function(or, or_ub){
     
@@ -242,27 +326,23 @@ get_std_err_from_lb <-
   }
 ```
 
-**Education Level**
+**Some Education vs No Education Predictor**
 
-Group 0 = education none. Group 1 = education some 
+1. Odds Ratio is 4.04, so $\hat \beta_{Education} = log(4.04)$ = `r round(log(4.04),4)`
 
-OR = 4.04 = $e^{\hat \beta}$, so Beta education some = log(4.04) = `r round(log(4.04),4)`
+2. To get a standard error, we will take the difference between log(OR) and the lower/upper 
+bound of C.I., and divide that difference by 1.96. We do that for both lower and upper bounds 
+to make sure that we get the same value from each calculation, which will be a standard error 
+for the model estimate
 
-Taking the log of the upper bound is all we need to find a standard error. upper bound on the fitted values 
-scale = `r round(log(13.9), 4)`, 
+ * Thus, scaled difference between log(OR) and log(Lower Bound of C.I) is 
+$\frac{log(4.04) - log(1.17)}{1.96} =$ `r round(get_std_err_from_lb(or = 4.04, or_lb = 1.17),4)`
+ 
+ * Scaled difference between log(Upper Bound of C.I) and log(OR) is 
+$\frac{log(13.9) - log(4.04)}{1.96} =$ `r round(get_std_err_from_ub(or = 4.04, or_ub = 13.9),4)`
 
-Then, we take the difference between  `r round(log(13.9), 4)` and `r round(log(4.04),4)`, and divide it by 
-z-multiplier 1.96, so we get $\large \frac{2.6319 - 1.3962}{1.96} =$ `r round((2.6319 - 1.3962)/1.96,4)` as a standard error estimate. 
-
-Check that it matches the lower bound estimate as well 
-
-lower bound log = log(1.17) = `r round(log(1.17), 4)`
-
-Difference = log(4.04) - log(1.17) = `r round(log(4.04) - log(1.17), 4)`
-
-Divide by 1.96 and obtain `r round((log(4.04) - log(1.17))/1.96, 4)`
-
-We have a bit of a rounding error going on 
+ * We have a small rounding error, but the two calculations agree, therefore 
+ $\hat \beta_{Education}=$ `r round(log(4.04),4)` with $se(\beta_{Education})$ = `r round(get_std_err_from_ub(or = 4.04, or_ub = 13.9),4)`
 
 **Gender** 
 
@@ -271,6 +351,10 @@ Standard error from upper bound: `r get_std_err_from_ub(or = 1.38, or_ub = 12.88
 Standard error from lower bound: `r get_std_err_from_lb(or = 1.38, or_lb = 1.23)`
 
 Not equal, address in (b)
+
+**SES High vs Low**
+
+**Number of Partners**
 
 ### B 
 
