@@ -32,8 +32,8 @@ source("/Users/denisostroushko/Desktop/UofM MS/MS 2023 - 1 Spring/PUBH 7406/Home
 The linear probability model with one predictor is given by a general equation $\hat \pi(x) = \hat \beta_0 + \hat \beta_1 * x$. Due to its simple form, the interpretation is straightforward. When x = 0, i.e. a person 
 consumes no alcohol, estimated probability of malformation is the intercept, which is 0.0025. 
 
-A coefficient for alcohol consumption is 0.001087, meaning that each additional alcholic drink per day 
-increases the prbability of malformation by 0.001087. There are no other predictors in the model, so 
+A coefficient for alcohol consumption is 0.001087, meaning that each additional alcoholic drink per day 
+increases the probability of malformation by 0.001087. There are no other predictors in the model, so 
 we do not have anything to hold constant in this interpretation.
 
 **Relative Risk**
@@ -49,7 +49,6 @@ $\hat \pi(7) =$ 0.0025 + 0.001087 * 7 = `r round(0.0025 + 0.001087 * 7, 4)`
 Therefore, the relative risk is given by a ratio of fitted probabilities, which is 
 $\large \frac{\hat \pi(7)}{\hat \pi(0)} =$ `r round((0.0025 + 0.001087 * 7)/(0.0025),4)` 
 
-### B 
 
 # Problem 2
 
@@ -179,11 +178,11 @@ In the logistic regression framework, Wald test tells us if the estimate is stat
 
 2. Alternative hypothesis: $H_a: \hat \beta \neq 0$
 
-3. Test statistic: $\large \frac{\hat \beta - 0}{se(\hat \beta)}$ = $\frac{0.1449}{0.0593}$ = `r round(0.1449/0.0593,3)`
+3. Wald test statistic: $W^* = \large (\frac{\hat \beta - 0}{se(\hat \beta)})^2$ = $\frac{0.1449}{0.0593}$ = `r round((0.1449/0.0593)^2,3)` with 1 degree of freedom 
 
-4. Cutoff value is the 97.5th quantile of standard normal distribution = $Z^*$ = 1.96
+4. Cutoff value is the 95th quantile of $\chi^2_1$ = `r round(qchisq(p= 0.95, df = 1),2)` = $C$
 
-5. $P(Z^* > Z) =$ `r pnorm(0.1449/0.0593, lower.tail = F)` 
+5. $P(C > W^*) =$ `r round(pchisq((0.1449/0.0593)^2, df = 1, lower.tail = F), 5)` 
 
 6. P value is small and the test statistic is greater than the cutoff value for significance at the 95% confidence level. Therefore, we have enough evidence to reject the null hypothesis and conclude that the effect of LI level
 is not zero. Higher LI levels are positively associated with the chance of relapse. 
@@ -213,7 +212,7 @@ predictor is necessary to improve model fit.
 
 I decided to adopt an approach from page 30 of lecture notes for part one. I will first find a 
 standard error and a confidence interval for the linear predictor, 
-$\eta =  \vec x^T \hat \beta$. 
+$\eta =  \textbf{x}^T \boldsymbol {\hat  \beta}$. 
 Then we will use a logit function to map linear predictor and a 95% confidence interval to the 
 probability space. 
 
@@ -285,13 +284,77 @@ So, when LI = 8, $\hat \eta$ = `r round(lin_predictor(beta_0 = -3.7771, beta_1 =
 
 Now, using a logit function, we can map these three estimates to the probability space. 
 
-Estiamted probability of relapse at LI = 8 is `r round(logit(eta), 4)`, bounded by the 
+Estimated probability of relapse at LI = 8 is `r round(logit(eta), 4)`, bounded by the 
 (
 `r round(logit(eta - 1.96*sqrt(var)), 4)`,
 `r round(logit(eta + 1.96*sqrt(var)), 4)`
 ) 95% confidence interval. 
 
 # Problem 4
+
+We are given a logit equation: $\Large logit(\hat \pi) = -10.071 - 0.509*c + 0458 * x$
+
+Additionally, we have descriptive sample statistics for explanatory variables $c$ and $x$. 
+
+**Standardized Coefficients**
+
+Denote standardized coefficient as $\hat \beta^{'}$, and $\hat \beta^{'} = \hat \beta * s$ where
+$s$ is a sample standard deviation of a given predictor. 
+We interpret standardized coefficient as an executed change in log-odds when a given 
+predictor $x$ increases by one standard deviation, after adjusting for other predictors. 
+
+This is a simple change from a regular $\hat \beta$ which tells us an expected 
+change in log-odds when $x$ changes by one unit, after adjusting for other variables. 
+
+In the case of width, a standardized coefficient is $\hat \beta^{'}_x$ = 0.458 * 2.11 = 0.97.
+
+Therefore, when width of a crab changes by one standard deviation we expect log -odds of 
+having a satellite to increase by 0.97. For example, this change in width may increase 
+log-odds from 1 to 1.97.
+
+Color has a similar, although an unintuitive explanation. The average color category is 
+2.44 and the standard deviation is 0.8. Therefore, a one standard deviation from the mean is 
+2.44 + 0.8 = 3.24, which corresponds to the -0.41 * 0.8 = -0.328 change in log odds. 
+So, as crab color category increases, the log odds of having a satellite crab decrease linearly.
+
+**Effect of Crab Color Through Probabilities**
+
+Using a logit function, we can obtain probabilities for each combination of predictors. 
+We estimate expected change in probability as a result of color change while holding crab 
+width constant at $\bar x$ = 26.3
+
+Therefore, probability of having a satellite for a crab of color category 1 and average width is 
+
+```{r}
+p_1 <- exp(-10.071 - 0.509 * 1 + 0.458 * 26.3) / (1 + exp(-10.071 - 0.509 * 1 + 0.458 * 26.3))
+
+p_4 <- exp(-10.071 - 0.509 * 4 + 0.458 * 26.3) / (1 + exp(-10.071 - 0.509 * 4 + 0.458 * 26.3))
+```
+
+$\Large P(Y = 1 | c = 1, x = 26.3) = \frac{e^{-10.071 - 0.509 * 1 + 0.458 * 26.3}}{1 + e^{-10.071 - 0.509 * 1 + 0.458 * 26.3}}=$ `r round(p_1, 4)`
+
+Similarly, for a crab of color category 4 we have 
+
+$\Large P(Y = 1 | c = 1, x = 26.3) = \frac{e^{-10.071 - 0.509 * 1 + 0.458 * 26.3}}{1 + e^{-10.071 - 0.509 * 1 + 0.458 * 26.3}}=$ `r round(p_4, 4)`
+
+```{r}
+
+# playing around with the dynamic text 
+
+if((p_4/p_1  - 1) * 100 < 0){
+  out_text = paste0("decreases by about ", abs(round((p_4/p_1  - 1) * 100)), "%")
+}
+
+out_text <- 
+  ifelse((p_4/p_1  - 1) * 100 < 0,
+         paste0("decreases by about ", abs(round((p_4/p_1  - 1) * 100)), "%"),
+         paste0("increases by about ", abs(round((p_4/p_1  - 1) * 100)), "%"))
+
+```
+
+So, when the crab color category increases from 1 to 4, probability of having a satellite crab
+`r out_text`.
+
 
 # Problem 5
 
@@ -301,12 +364,24 @@ We know that odds ratio = $e^{\hat \beta}$, therefore we need an inverse of this
 to get $\hat \beta$, i.e. $\hat \beta = log(Odds \ Ratio)$. 
 
 
-I will use code below to assit me in calculations: 
+I will use code below to assist me in calculations: 
+
+<!-- 
+
+So, we have beta and se 
+
+Then lower bound odds ratio = exp(beta - 1.96 * se)
+
+log(odds lower bound) = beta - 1.96 * se 
+
+se = (beta - log(odds lower bound))/1.96
+
+--> 
 
 ```{r}
 #| echo: true
 
-# some differnece 
+# some difference 
 get_std_err_from_ub <- 
   function(or, or_ub){
     
@@ -326,6 +401,7 @@ get_std_err_from_lb <-
   }
 ```
 
+
 **Some Education vs No Education Predictor**
 
 1. Odds Ratio is 4.04, so $\hat \beta_{Education} = log(4.04)$ = `r round(log(4.04),4)`
@@ -335,35 +411,64 @@ bound of C.I., and divide that difference by 1.96. We do that for both lower and
 to make sure that we get the same value from each calculation, which will be a standard error 
 for the model estimate
 
- * Thus, scaled difference between log(OR) and log(Lower Bound of C.I) is 
+3. Thus, scaled difference between log(OR) and log(Lower Bound of C.I) is 
 $\frac{log(4.04) - log(1.17)}{1.96} =$ `r round(get_std_err_from_lb(or = 4.04, or_lb = 1.17),4)`
  
- * Scaled difference between log(Upper Bound of C.I) and log(OR) is 
+4. Scaled difference between log(Upper Bound of C.I) and log(OR) is 
 $\frac{log(13.9) - log(4.04)}{1.96} =$ `r round(get_std_err_from_ub(or = 4.04, or_ub = 13.9),4)`
 
- * We have a small rounding error, but the two calculations agree, therefore 
+5. We have a small rounding error, but the two calculations agree, therefore 
  $\hat \beta_{Education}=$ `r round(log(4.04),4)` with $se(\beta_{Education})$ = `r round(get_std_err_from_ub(or = 4.04, or_ub = 13.9),4)`
 
 **Gender** 
 
-Standard error from upper bound: `r get_std_err_from_ub(or = 1.38, or_ub = 12.88)`
+1. Following the same steps, we calculate standard error from the upper bound of C.I. first. 
+Standard error from upper bound: $\frac{log(12.88) - log(1.23)}{1.96} =$
+`r round(get_std_err_from_ub(or = 1.38, or_ub = 12.88), 4)`
 
-Standard error from lower bound: `r get_std_err_from_lb(or = 1.38, or_lb = 1.23)`
+2. Standard error from lower bound:  $\frac{log(1.38) - log(1.23)}{1.96} =$
+`r round(get_std_err_from_lb(or = 1.38, or_lb = 1.23), 4)`
 
-Not equal, address in (b)
+3. The two results do not agree, which we will address in part (b)
 
 **SES High vs Low**
 
+1. Standard error from upper bound: $\frac{log(18.28) - log(5.82)}{1.96} =$
+`r round(get_std_err_from_ub(or = 5.82, or_ub = 18.28), 4)`
+
+2. Standard error from lower bound:  $\frac{log(5.82) - log(1.87)}{1.96} =$
+`r round(get_std_err_from_lb(or = 5.82, or_lb = 1.87), 4)`
+
+3. Disregarding a small rounding error, we have two estimates that agree with each other, so we have found a 
+standard error. Model estimate is $\hat \beta_{SES High}$ = `r round(log(5.82), 4)` with 
+$se(\hat  \beta_{SES High}) =$ 
+`r round(get_std_err_from_lb(or = 5.82, or_lb = 1.87), 4)`
+
 **Number of Partners**
+
+1. Standard error from upper bound: $\frac{log(11.31) - log(3.22)}{1.96} =$
+`r round(get_std_err_from_ub(or = 3.22, or_ub = 11.31), 4)`
+
+2. Standard error from lower bound:  $\frac{log(3.22) - log(1.08)}{1.96} =$
+`r round(get_std_err_from_lb(or = 3.22, or_lb = 1.08), 4)`
+
+3. A rounding error is quite obvious here, and I am not sure how this happens. In any case, we have two estimates that *almost* agree with each other, so we have found a 
+standard error. Model estimate is $\hat \beta_{SES \ High}$ = `r round(log(3.22), 4)` with 
+$se(\hat \beta_{SES \ High}) =$ 
+`r round(get_std_err_from_lb(or = 3.22, or_lb = 1.08), 4)`
 
 ### B 
 
-take 1.38 to be a log-odds ratio, so we need to exponentiate and then take the log again to get the right 
-estiamte
+As our problem suggests, take 1.38 to be a log-odds ratio, so we need to exponentiate and then take the log again to get the right estimate. 
 
-So, calculating from the upper bound, we have `r get_std_err_from_ub(or = exp(1.38), or_ub = 12.88)`
+We adjust our formula, and calculate standard error using the upper bound as  $\frac{log(12.88) - log(exp(1.38))}{1.96} = \frac{log(12.88) - 1.38)}{1.96}$
 
-So, calculating from the lower bound, we have `r get_std_err_from_lb(or = exp(1.38), or_lb = 1.23)`
+So, calculating from the upper bound, we have `r round(get_std_err_from_ub(or = exp(1.38), or_ub = 12.88),4)`
 
-# Problem 6
+So, calculating from the lower bound, we have `r round(get_std_err_from_lb(or = exp(1.38), or_lb = 1.23),4)`
+
+Since the two calculation agree, we conclude that the model estimate for Gender is $\hat \beta_{Males}=$
+1.38 with $se(\hat \beta_{Males}) =$ `r round(get_std_err_from_ub(or = exp(1.38), or_ub = 12.88),4)`
+
+# Problem 6 
 
