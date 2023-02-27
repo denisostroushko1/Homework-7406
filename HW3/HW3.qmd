@@ -1,0 +1,385 @@
+---
+title: "Homework 3"
+author: "Denis Ostroushko"
+format: 
+  pdf:
+    toc: false
+    number-sections: false
+    colorlinks: true
+editor: source
+execute: 
+  eval: true
+  echo: false
+  message: false
+  warning: false
+---
+
+```{R}
+
+#| include: false
+
+library(tidyverse)
+library(kableExtra)
+
+```
+
+# Probem 1
+
+Logistic regression model for fitted data is given by: 
+
+$$\Large logit(P(Cancer = Yes)) = -7 + 0.1 * A + 1.2 * S + 0.3 * R + 0.2 * R*S$$
+
+**$YS$ conditional odds ratio equation**
+
+Conditional $YS$ odds ratio is presented when we compare $R=1$ to $R=0$ and let $S$ be a variable in the 
+resulting odds ratio. Then, varying levels of smoking will further change odds ratio for $R=1$ vs $R=0$. 
+
+$$\Large OR(R | S = s) = \frac{\frac{P(R = 1 | S = s)}{1 - P(R = 1| S=s)}}{\frac{P(R = 0 | S = s)}{1 - P(R = 0 | S = s)}} = $$
+
+Odds ratio for both numerator and denominator simplify to a single exponential term. We hold A constant while
+adjusting for it in our comparison. We let S = s be an arbitrary value of S that takes on value 0 or 1.  
+
+$$\Large \frac{exp(-7 + 0.1 * A + 1.2 * s + 0.3 * 1 + 0.2 *s * 1)}{exp(-7 + 0.1 * A + 1.2 * s + 0.3 * 0 + 0.2 * s*0) } = $$
+
+$$\Large exp(0.3 + 0.2 * s)$$
+
+This odds ratio is the compares the effects of race on the likelihood of having cancer, while adjusting for 
+smoking. For black smokers, we have the highest chance of getting cancer, and white non-smokers have the lowest chance of getting cancer. 
+
+More precisely, black non-smokers are $exp(0.3) =$ `r round(exp(0.3), 4)` times more likely to have cancer, 
+while black smokers are $exp(0.3 + 0.2) =$ `r round(exp(0.3+0.2),4)` times more likely to have cancer, 
+after adjusting for other variables. 
+
+**$YR$ conditional odds ratio equation**
+
+Conditional $YR$ odds ratio is presented when we compare $S=1$ to $S=0$ and let $R$ be a variable in the 
+resulting odds ratio. Then, varying levels of smoking will further change odds ratio for $S=1$ vs $S=0$. 
+
+$$\Large OR(S | R = r) = \frac{\frac{P(S = 1 | R = r)}{1 - P(S = 1| R=r)}}{\frac{P(S = 0 | R = r)}{1 - P(S = 0 | R = r)}} = $$
+
+$$\Large = \frac{exp(-7 + 0.1 * A + 1.2 + 0.3*r + 0.2 * 1 * r)}{exp(-7 + 0.1*A + 1.2 * 0 + 0.3*r + 0.2*0*r)}$$
+
+$$\Large exp(1.2 + 0.2 * r) $$
+
+So, smokers are $exp(1.2) =$ `r round(exp(1.2),4)` times more likely to have cancer when compared with non-smokers, after adjusting for other variables. Additionally, black smokers are $exp(1.2 + 0.2) =$ `r round(exp(1.2 + 0.2),4)` times more likely to have cancer, after adjusting for other variables. 
+
+MORE TO FINISH THE PROBLEM 
+
+# Problem 2
+
+```{r}
+prob2 <- 
+  read.csv("http://jaredhuling.org/data/pubh7406/table_6_3_data.csv")
+
+# summary(factor(prob2$M))
+
+# summary(factor(prob2$E))
+
+# summary(factor(prob2$P))
+
+prob2 <- 
+  prob2 %>% 
+  
+  mutate(
+    M_num = ifelse(M == "divorced", 0, 1)
+  )
+
+```
+
+```{r}
+
+prob2_glm <- glm(M_num ~ E * P + G, data = prob2, family = binomial("logit"))
+
+g_main <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GMale"][1]
+g_se   <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GMale"][2]
+g_p_val  <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GMale"][4]
+
+inter_main <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "Eyes:Pyes"][1]
+inter_se   <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "Eyes:Pyes"][2]
+inter_p_val  <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "Eyes:Pyes"][4]
+
+summary(prob2_glm)$coefficients %>% 
+  data.frame() %>% 
+  kable(booktabs = T)
+  
+```
+
+**Effect of G**
+
+interpret effects of `r g_main` and use `r g_se` to get confidence intervals 
+if independent then their interaction must be non-significant 
+
+According to comments from TA we also need to state every
+
+test it: 
+
+1. Null hypothesis: $H_0:$ $\hat \beta_{G} = 0$
+
+2. Alternative hypothesis: $H_a:$ $\hat \beta_{G} \neq 0$
+
+3. Z statistic: $(\frac{\hat \beta - 0}{se(\hat \beta)})$ = `r round((g_main/g_se), 4)`
+
+4. P-value: `r round(g_p_val, 4)`
+
+5. Conclusion: There is enough statistical evidence to conclude that the effect 
+
+**Independence of E and P**
+
+if independent then their interaction must be non-significant 
+
+test it: 
+
+1. Null hypothesis: $H_0:$ $\hat \beta_{E \ and \ P} = 0$
+
+2. Alternative hypothesis: $H_a:$ $\hat \beta_{E \ and \ P} \neq 0$
+
+3. Z statistic: $(\frac{\hat \beta - 0}{se(\hat \beta)})$ = `r round((inter_main/inter_se), 4)`
+
+4. P-value: `r round(inter_p_val, 4)`
+
+5. Conclusion: Effects of $E$ and $P$ are not independent of each, as evidenced by the low p-value and big 
+z-statistic. Therefore, we can conclude that effects of variable $E$ have varying effects on the outcome 
+$M$, depending on the levels of variable $P$, after adjusting for other variables. 
+
+# Problem 3
+
+```{r}
+prob3 <- 
+  read.csv("https://jaredhuling.org/data/pubh7406/hiroshima.csv")
+```
+
+### (i)
+
+
+```{R}
+
+prob3$radiation <- factor(prob3$radiation, 
+                          levels = unique(prob3$radiation))
+
+prob3_glm <- glm(formula = cbind(leukemia = prob3$leukemia, 
+                    other = prob3$other) ~ prob3$radiation , family = binomial(link = "logit"))
+
+summary(prob3_glm)
+
+```
+
+INTERPRET ON ODDS SCALE, SO USE EXPOENENTIATED COEFFICIENTS
+
+### (iii)
+```{r}
+
+prob3_glm.2 <- glm(formula = cbind(leukemia = prob3$leukemia, 
+                    other = prob3$other) ~ prob3$radiation_midpoint , family = binomial(link = "logit"))
+
+summary(prob3_glm.2)
+
+```
+
+COMPARE to model prob3_glm 
+
+Prefer this one: 
+
+becuase claerly lienar trend is better 
+
+Avoid multiple comparisons 
+```{R}
+
+viz_data <- 
+  data.frame(
+    prob = prob3$leukemia / (prob3$leukemia + prob3$other), 
+    seqn = seq(from = 1, to = length(unique(prob3$radiation_midpoint)), by = 1), 
+    labels = sort(unique(prob3$radiation_midpoint))
+  )
+
+viz_data$log_odds <- with(viz_data, log(prob/(1-prob)))
+
+ggplot(data = viz_data, 
+       aes(x = seqn, 
+           y = log_odds)) + geom_point() + geom_line() + 
+  geom_smooth(method = "lm", se = F)
+
+```
+
+### (iv)
+
+
+```{r}
+
+odds_ratio_estimator <- 
+  function(beta_1, A, B){
+    exp(beta_1 * (A-B))
+  }
+
+```
+
+### (v)
+
+```{r }
+
+variance_calculator <- 
+  function(levels, vcov_betas){
+    
+    t(levels) %*% vcov_betas %*% levels
+    
+  }
+
+```
+
+```{r}
+prob3
+```
+
+```{r}
+
+#| eval: false
+
+# recreate the data as one row per observation from the summary data 
+
+mid_0_leuk_y <- 
+  data.frame(
+    radiation_midpoint = rep(0, 13), 
+    leuk_flag = rep(1, 13)
+  )
+
+mid_0_leuk_n <- 
+  data.frame(
+    radiation_midpoint = rep(0, 378), 
+    leuk_flag = rep(0, 378)
+  )
+
+
+mid_5_leuk_y <- 
+  data.frame(
+    radiation_midpoint = rep(5, 5), 
+    leuk_flag = rep(1, 5)
+  )
+
+mid_5_leuk_n <- 
+  data.frame(
+    radiation_midpoint = rep(5, 200), 
+    leuk_flag = rep(0, 200)
+  )
+
+mid_29_leuk_y <- 
+  data.frame(
+    radiation_midpoint = rep(29.5, 5), 
+    leuk_flag = rep(1, 5)
+  )
+
+mid_29_leuk_n <- 
+  data.frame(
+    radiation_midpoint = rep(29.5, 151), 
+    leuk_flag = rep(0, 151)
+  )
+
+
+mid_74_leuk_y <- 
+  data.frame(
+    radiation_midpoint = rep(74.5, 3), 
+    leuk_flag = rep(1, 3)
+  )
+
+mid_74_leuk_n <- 
+  data.frame(
+    radiation_midpoint = rep(74.5, 47), 
+    leuk_flag = rep(0, 47)
+  )
+
+
+
+mid_149_leuk_y <- 
+  data.frame(
+    radiation_midpoint = rep(149.5, 4), 
+    leuk_flag = rep(1, 4)
+  )
+
+mid_149_leuk_n <- 
+  data.frame(
+    radiation_midpoint = rep(149.5, 31), 
+    leuk_flag = rep(0, 31)
+  )
+
+	
+mid_249_leuk_y <- 
+  data.frame(
+    radiation_midpoint = rep(249.5, 18), 
+    leuk_flag = rep(1, 18)
+  )
+
+mid_249_leuk_n <- 
+  data.frame(
+    radiation_midpoint = rep(249.5, 33), 
+    leuk_flag = rep(0, 33)
+  )
+
+
+prob3_big_data <- 
+  rbind(mid_249_leuk_n,
+        mid_249_leuk_y,
+        mid_149_leuk_n, 
+        mid_149_leuk_y, 
+        mid_74_leuk_n, 
+        mid_74_leuk_y, 
+        mid_29_leuk_n,
+        mid_29_leuk_y,
+        mid_5_leuk_n,
+        mid_5_leuk_y,
+        mid_0_leuk_n,
+        mid_0_leuk_y
+        )
+
+```
+
+```{R bootstrap simmulation to get variance of odds ratios}
+
+#| eval: false
+
+prob3_glm.long_data <- glm(leuk_flag ~ radiation_midpoint, data = prob3_big_data, family = binomial(link = "logit"))
+
+# true value of Odds Ratio 
+odds_ratio_estimator(beta_1 = coef(prob3_glm.2)[2], A = 199, B = 100)
+
+
+set.seed(1763786)
+
+simmulate_OR_ci <- 
+  function(data, A, B, iter){
+    
+    res <- 
+      data.frame(iteration = seq(from = 1, to = iter, by = 1), 
+                 beta = NA)
+    
+    for(i in 1:iter){
+    # resample the data 
+      resampeld <- data[sample(rownames(data), size = nrow(data), replace = T),]
+      
+    # fit the model 
+      glm_iter <- glm(leuk_flag ~ radiation_midpoint, data = resampeld, family = binomial("logit"))
+      
+    # store the estiamte 
+      res$beta[i] = coef(glm_iter)[2]
+    }
+    
+    res$OR_at_AB <- exp(res$beta * (A - B))
+    
+    return(res)
+  }
+
+sim_data <- simmulate_OR_ci(data = prob3_big_data, 
+                            A = 100, 
+                            B = 199, 
+                            iter = 1000)
+
+summary(prob3_glm.2)
+summary(sim_data$beta) # make a summery of beta to make sure that we got the sim function right... if the result is right then we can treat odds ratio CI as a credible estimate. Use results of this simulation to check results of an analytical solution 
+
+summary(sim_data$OR_at_AB)
+print(
+  paste(
+    "EST: ", round(mean(sim_data$OR_at_AB), 6), 
+    "LB: ",  round(quantile(sim_data$OR_at_AB, 0.025), 6), 
+    "UB: ",  round(quantile(sim_data$OR_at_AB, 0.975), 6)
+  )
+)
+
+```

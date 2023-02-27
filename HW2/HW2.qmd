@@ -132,10 +132,11 @@ LI increases from 14 to 28.
 
 ### E
 
-Odds ratio for a logistic regression model is given by $e^{\hat \beta_1}$ for a predictor $x_1$. 
-This is the multiplicative change in odds ratio. 
+For each level of $x$ we can calculate a probability and corresponding odds using a logit link function. Then, we compare the odds by taking odds ratio: 
 
-In our problem, $\hat \beta_1$ = 0.1449, and so the odds ratio is $e^{0.1449}$ = `r round(exp(0.1449),2)`
+$$\Large Odds \ Ratio = \frac{\frac{\pi(x+1)}{1 - \pi(x+1)}}{\frac{\pi(x)}{1 - \pi(x)}} = $$
+
+$$\Large \frac{exp(-3.7771 + 0.1449(x+1))}{exp(-3.7771 + 0.1449x)} = exp(0.1449) = 1.16$$
 
 ### F
 
@@ -447,10 +448,10 @@ $se(\hat  \beta_{SES High}) =$
 **Number of Partners**
 
 1. Standard error from upper bound: $\frac{log(11.31) - log(3.22)}{1.96} =$
-`r round(get_std_err_from_ub(or = 3.22, or_ub = 11.31), 4)`
+`r round(get_std_err_from_ub(or = 3.22, or_ub = 11.31), 20)`
 
 2. Standard error from lower bound:  $\frac{log(3.22) - log(1.08)}{1.96} =$
-`r round(get_std_err_from_lb(or = 3.22, or_lb = 1.08), 4)`
+`r round(get_std_err_from_lb(or = 3.22, or_lb = 1.08), 20)`
 
 3. A rounding error is quite obvious here, and I am not sure how this happens. In any case, we have two estimates that *almost* agree with each other, so we have found a 
 standard error. Model estimate is $\hat \beta_{SES \ High}$ = `r round(log(3.22), 4)` with 
@@ -472,6 +473,10 @@ Since the two calculation agree, we conclude that the model estimate for Gender 
 
 # Problem 6 
 
+I wrote out soltions to Problem 6 on paper. I am including scanned pages as my solution here. 
+
+
+<!-- 
 We are given a hypothetical data set with count data at different levels of $x$. When $x=0$ then we have $y_0$ success outcomes out of $n_0$ trials. Therefore, we have $n_0 - y_0$ fails. 
 
 The odds of success for the group with $x=0$ is then given by $$\Large \frac{\frac{y_0}{n_0}}{\frac{n_0-y_0}{n_0}} = \frac{y_0}{n_0-y_0}$$
@@ -559,6 +564,6 @@ Therefore, $\Large \alpha = log({\frac{y_0}{n_0-y_0}})$ and equation holds.
 
 We showed that $\beta$ is the log-odds ratio of the sample. 
 
-
+--> 
 
 
