@@ -86,6 +86,8 @@ prob2 <-
 
 ```
 
+Stage 3 model summary table is: 
+
 ```{r}
 
 prob2_glm <- glm(M_num ~ E * P + G, data = prob2, family = binomial("logit"))
@@ -104,6 +106,8 @@ summary(prob2_glm)$coefficients %>%
   
 ```
 
+change all E, P, G,etc... to their real names for easier reading 
+
 **Effect of G**
 
 interpret effects of `r g_main` and use `r g_se` to get confidence intervals 
@@ -115,7 +119,11 @@ test it:
 
 1. Null hypothesis: $H_0:$ $\hat \beta_{G} = 0$
 
+1.1 Mull hyp in english 
+
 2. Alternative hypothesis: $H_a:$ $\hat \beta_{G} \neq 0$
+
+2.1 Alt hyp in english 
 
 3. Z statistic: $(\frac{\hat \beta - 0}{se(\hat \beta)})$ = `r round((g_main/g_se), 4)`
 
@@ -159,19 +167,56 @@ prob3$radiation <- factor(prob3$radiation,
 prob3_glm <- glm(formula = cbind(leukemia = prob3$leukemia, 
                     other = prob3$other) ~ prob3$radiation , family = binomial(link = "logit"))
 
-summary(prob3_glm)
+summary(prob3_glm)$coefficients %>% 
+  data.frame() %>% 
+  
+  mutate(comps = rownames(summary(prob3_glm)$coefficients), 
+         comps = substr(comps, nchar("prob3$") + 1, max(nchar(comps))), 
+         
+         comps = case_when(
+           comps == "cept)" ~ "Intercept", 
+           TRUE ~ comps
+         )) %>% 
+  
+  select(comps, everything()) %>% 
+
+  kable(booktabs = T, row.names = FALSE, digits = 3, 
+        align = c("l", rep('c', length(length(summary(prob3_glm)$coefficients %>% data.frame())))), 
+        col.names = c("Radiation Level", "Estimate", "Std. Error", "Z-value", "P-value"), 
+        ) %>% 
+   kable_styling(position = "center")
 
 ```
 
 INTERPRET ON ODDS SCALE, SO USE EXPOENENTIATED COEFFICIENTS
 
+### (ii)
+
 ### (iii)
+
 ```{r}
 
 prob3_glm.2 <- glm(formula = cbind(leukemia = prob3$leukemia, 
                     other = prob3$other) ~ prob3$radiation_midpoint , family = binomial(link = "logit"))
 
-summary(prob3_glm.2)
+summary(prob3_glm.2)$coefficients %>% 
+  data.frame() %>% 
+  
+  mutate(comps = rownames(summary(prob3_glm.2)$coefficients), 
+         comps = substr(comps, nchar("prob3$") + 1, max(nchar(comps))), 
+         
+         comps = case_when(
+           comps == "cept)" ~ "Intercept", 
+           TRUE ~ comps
+         )) %>% 
+  
+  select(comps, everything()) %>% 
+
+  kable(booktabs = T, row.names = FALSE, digits = 3, 
+        align = c("l", rep('c', length(length(summary(prob3_glm.2)$coefficients %>% data.frame())))), 
+        col.names = c("Radiation Level", "Estimate", "Std. Error", "Z-value", "P-value"), 
+        ) %>% 
+   kable_styling(position = "center")
 
 ```
 
@@ -200,38 +245,50 @@ ggplot(data = viz_data,
 
 ```
 
+**Deviance Comparison**
+
+```{r}
+
+anova(prob3_glm)
+
+anova(prob3_glm.2)
+      
+anova(prob3_glm, prob3_glm.2, test='LR')
+
+```
+
+**Residual Plots**
+
+```{r}
+
+## somehow our factor model does not produce deviance residuals!! WHYYYY?? 
+
+rbind(
+  cbind(
+    prob3 %>%
+    select(radiation_midpoint, radiation),
+    data.frame(Residuals = residuals(prob3_glm, "deviance"), 
+               Model = rep("Categorical", nrow(prob3)))
+    ),
+  cbind(
+    prob3 %>%
+    select(radiation_midpoint, radiation),
+    data.frame(Residuals = residuals(prob3_glm.2, "deviance"), 
+               Model = rep("Midpoint", nrow(prob3)))
+    )
+) %>% 
+
+ggplot(aes(x = radiation_midpoint, 
+           y = Residuals, 
+           color = Model)) + geom_point(size = 2)
+
+
+```
+
 ### (iv)
 
 
-```{r}
-
-odds_ratio_estimator <- 
-  function(beta_1, A, B){
-    exp(beta_1 * (A-B))
-  }
-
-```
-
-### (v)
-
-```{r }
-
-variance_calculator <- 
-  function(levels, vcov_betas){
-    
-    t(levels) %*% vcov_betas %*% levels
-    
-  }
-
-```
-
-```{r}
-prob3
-```
-
-```{r}
-
-#| eval: false
+```{r recreate pivoted data to a long single obs data set}
 
 # recreate the data as one row per observation from the summary data 
 
@@ -330,26 +387,134 @@ prob3_big_data <-
 
 ```
 
-```{R bootstrap simmulation to get variance of odds ratios}
-
-#| eval: false
+```{r fit a log reg model on a single observation data set}
 
 prob3_glm.long_data <- glm(leuk_flag ~ radiation_midpoint, data = prob3_big_data, family = binomial(link = "logit"))
+```
 
-# true value of Odds Ratio 
-odds_ratio_estimator(beta_1 = coef(prob3_glm.2)[2], A = 199, B = 100)
+```{r helper functions for Odds ratios}
+odds <- 
+  function(x){ x / (1-x)}
+```
+
+Given a logistic regression model with an intercept and one predictor, odds ratio for a one unit change in 
+predictor $X$ are given by $\Large e^{\hat \beta_1 * ((x + 1) - x)}= e^{\hat \beta_1}$
+
+Therefore, for two values of $X$ that are more than one unit apart, denoted as $W_1$ and $W_2$ are 
+given by $\Large e^{\hat \beta_1 * (W_1 - W_2)}$
+
+Using a full notation and including intercepts we have $\Large e^{\hat \beta_0 - \hat \beta_0 + \hat \beta_1 * (W_1 - W_2)}$
+
+Now we can take a ratio of odds ratios, keeping intercepts in the notation. We denote levels of $X$ from the 
+first odds ratio as $W_1$ and $W_2$, and levels of $X$ from the second odds ratio as $Z_1$ and $Z_2$. 
+In each case we compare odds for level with subscript 1 to level with subscript 2. 
+
+We then take a ratio of odds ratio for $W's$ to odds ratio for $Z's$. Estimator is given below: 
+
+$$\Large e^{\hat \beta_0 (1 - 1 - 1 + 1) + \hat \beta_1 * (W_1 - W_2 - Z_1 + Z_2)}$$
+
+We can see that algebraic signs follow a patter, and we have one real number as a multiplier for each 
+model parameters. Note that a real number for $\hat \beta_0$ is zero, however, it is convenient to 
+keep it there as for the derivation of a matrix form calculation. 
+
+Therefore, as per Jared's tip, a ratio of odds ratios is a function of four values of $X$, and can be 
+represented as $$\Large e^{\textbf a^T \boldsymbol{\hat \beta}}$$, where $\textbf a^T = [1-1-1+1, W_1 - W_2 - Z_1 + Z_2]$
+
+```{r ratio of odds ratio hand calculation}
+
+## matrix calculation ~~by hand~~ 
+#### last line is ratio of ODDS ratios
+
+levels = c(100, 199, 50, 99)
+
+mult = c(1, -1, -1, 1)
+
+betas = coef(prob3_glm.2)
+
+contr_vec = c(sum(mult), sum(mult * levels))
+    
+## Keep in mind that these are the matrix notation for the power of exp, so these need to be squared
+
+    # t(contr_vec) %*% betas # result of aT * beta hat 
+    exp_ratio_odds_ratio <-  exp(t(contr_vec) %*% betas) # final answer
+    
+    ## so, by Jared's tip, variance is supposed to be calculated using this formula:
+    
+    var_aT_B <- t(contr_vec) %*% vcov(prob3_glm.2) %*% contr_vec # result of aT * VCOV * aT
+
+## now let's use model predict and construct odds ratio 
+#### predict a model using a value of ratioation exposure
+#### turn probability into odds, 
+#### then gets odds ratio 
+#### then get ratio of odds ratios 
+
+p_100 <- predict(prob3_glm.long_data, newdata = data.frame(radiation_midpoint = 100), type = "response")
+p_199 <- predict(prob3_glm.long_data, newdata = data.frame(radiation_midpoint = 199), type = "response")
+
+p_50 <- predict(prob3_glm.long_data, newdata = data.frame(radiation_midpoint = 50), type = "response")
+p_100 <- predict(prob3_glm.long_data, newdata = data.frame(radiation_midpoint = 100), type = "response")
+
+# ratio of odds ratios 
+alternative_ratio_odds_ratios <- 
+  (odds(p_100) / odds(p_199))/
+  (odds(p_50) / odds(p_100) )
+
+```
 
 
-set.seed(1763786)
+So, the ratio of the odds of having leukemia comparing a radiation level of ‘100 to 199‘ and a radiation level of ‘50 to 99‘ is given by
+$\Large e^{\hat \beta_0 (1 - 1 - 1 + 1) + \hat \beta_1 * (100 - 199 - 50 + 99)} =$ `r round(exp_ratio_odds_ratio, 6)`
+
+### (v)
+
+In order to obtain a confidence interval for the ratio of odds ratio we can take two approaches: 
+
+1. Calculate confidence interval for $\large \textbf a^T \boldsymbol{\hat \beta}$, and then exponentiate 
+  the interval 
+  
+2. Use the delta method to calculate $\large Var(e^{\textbf a^T \boldsymbol{\hat \beta}})$ and then 
+  calculate the 95% confidence interval using a standard error of the odds scale directly. 
+  
+For my own reference, I will use both methods, and validate that the results indeed match. 
+
+**Log odds confidence interval** 
+
+Using Jared's tip, we can calculate $\large Var(\textbf a^T \boldsymbol{\hat \beta})$ directly by taking 
+$\large a^T \textbf V a$ where $V$ is a variance-covariance matrix of the fitted logistic regression model. 
+Variance-covariance estimates are given for model estimates including the intercept. 
+
+Using `R` output we estimate $\large Var(\textbf a^T \boldsymbol{\hat \beta}) =$ `r round(var_aT_B, 6)`
+
+Then, the 95% confidence interval on the original scale is $\large \textbf a^T \boldsymbol{\hat \beta} \pm 1.96 * \sqrt{Var(\textbf a^T \boldsymbol{\hat \beta})} =$ `r round(t(contr_vec) %*% betas, 6)` $\pm 1.96 *$ `r round(sqrt(var_aT_B), 6)`
+
+Taking exponential of interval end point given us a confidence interval for the ratio of odds ratios. The 
+95% confidence interval is (`r round(exp(t(contr_vec) %*% betas - 1.96 * sqrt(var_aT_B)),6)`, `r round(exp(t(contr_vec) %*% betas + 1.96 * sqrt(var_aT_B)),6)`)
+
+
+<!-- 
+ALERT, ALERT!!! 
+
+For Quarto chunk options to work we need to specify them on the line RIGHT AFTER the ```{R} line 
+Otherwise, knitter ignores the option
+
+--> 
+
+```{r  bootstrap simmulation to get variance of odds ratios}
+#| eval: false
+
+set.seed(1763712)
 
 simmulate_OR_ci <- 
-  function(data, A, B, iter){
+  function(data, W1, W2, Z1, Z2, iter){
     
     res <- 
       data.frame(iteration = seq(from = 1, to = iter, by = 1), 
-                 beta = NA)
+                 beta = NA,
+                 ratio_odds_ratios = NA)
     
     for(i in 1:iter){
+      
+      if(i %% 100 == 0){print(paste("on iteration:", i))}
     # resample the data 
       resampeld <- data[sample(rownames(data), size = nrow(data), replace = T),]
       
@@ -358,28 +523,50 @@ simmulate_OR_ci <-
       
     # store the estiamte 
       res$beta[i] = coef(glm_iter)[2]
+      
+      res$ratio_odds_ratios[i] <- 
+        (odds(predict(glm_iter, newdata = data.frame(radiation_midpoint = W1), type = "response"))/
+          odds(predict(glm_iter, newdata = data.frame(radiation_midpoint = W2), type = "response"))) /
+        
+        (odds(predict(glm_iter, newdata = data.frame(radiation_midpoint = Z1), type = "response"))/
+          odds(predict(glm_iter, newdata = data.frame(radiation_midpoint = Z2), type = "response")))
     }
-    
-    res$OR_at_AB <- exp(res$beta * (A - B))
     
     return(res)
   }
 
 sim_data <- simmulate_OR_ci(data = prob3_big_data, 
-                            A = 100, 
-                            B = 199, 
-                            iter = 1000)
+                            W1 = 100, 
+                            W2 = 199, 
+                            Z1 = 50, 
+                            Z2 = 100, 
+                            iter = 10000)
+```
 
-summary(prob3_glm.2)
-summary(sim_data$beta) # make a summery of beta to make sure that we got the sim function right... if the result is right then we can treat odds ratio CI as a credible estimate. Use results of this simulation to check results of an analytical solution 
 
-summary(sim_data$OR_at_AB)
-print(
-  paste(
-    "EST: ", round(mean(sim_data$OR_at_AB), 6), 
-    "LB: ",  round(quantile(sim_data$OR_at_AB, 0.025), 6), 
-    "UB: ",  round(quantile(sim_data$OR_at_AB, 0.975), 6)
-  )
-)
+
+```{r compare results}
+#| eval: false
+
+aT_B <- t(contr_vec) %*% betas
+var_aT_B <- t(contr_vec) %*% vcov(prob3_glm.2) %*% contr_vec
+## calculating variance of exponentiated vector using a delta method
+var_exp <- (-50 * exp(-50 * coefficients(prob3_glm.2)[2]))^2 * vcov(prob3_glm.2)[2,2]
+
+# using matrix notation and 
+print(paste("Matrix notation estimate:", round(exp(aT_B), 6)))
+print(paste("Matrix notation LB exponentiation:", round(exp(aT_B - 1.96 * sqrt(var_aT_B)), 6)))
+print(paste("Matrix notation UB exponentiation:", round(exp(aT_B + 1.96 * sqrt(var_aT_B)), 6)))
+
+print("")
+
+print(paste("Matrix notation LB Delta Method:", round(exp(aT_B) - 1.96 * sqrt(var_exp), 6)))
+print(paste("Matrix notation UB Delta Method:", round(exp(aT_B) + 1.96 * sqrt(var_exp), 6)))
+
+print("")
+
+print(paste("Bootstrapp Simulation estimate:", round(mean(sim_data$ratio_odds_ratios), 6)))
+print(paste("Bootstrapp Simulation LB:", round(quantile(sim_data$ratio_odds_ratios, 0.025), 6)))
+print(paste("Bootstrapp Simulation UB:", round(quantile(sim_data$ratio_odds_ratios, 0.975), 6)))
 
 ```
