@@ -194,6 +194,12 @@ INTERPRET ON ODDS SCALE, SO USE EXPOENENTIATED COEFFICIENTS
 
 ### (iii)
 
+First, let's fit the model that uses a midpoint radiation exposure as a continuous predictor of the log-odds 
+of developing leukemia. Being able to estimate and extrapolate chances of developing leukemia given some 
+other levels of radiation exposure is a big advantage over a model with categorical predictors.
+
+Model is given 
+
 ```{r}
 
 prob3_glm.2 <- glm(formula = cbind(leukemia = prob3$leukemia, 
@@ -216,17 +222,22 @@ summary(prob3_glm.2)$coefficients %>%
         align = c("l", rep('c', length(length(summary(prob3_glm.2)$coefficients %>% data.frame())))), 
         col.names = c("Radiation Level", "Estimate", "Std. Error", "Z-value", "P-value"), 
         ) %>% 
-   kable_styling(position = "center")
+   kable_styling(position = "center", latex_options = c("hold_position"))
 
 ```
 
-COMPARE to model prob3_glm 
+* We can see that the p-value is low and Z-statistic value is large, so we have enough statistical evidence 
+that radiation exposure is linearly related to the chance of developing leukemia. As radiation exposure levels
+increase, the chance gets higher. 
 
-Prefer this one: 
+We should use a linear model over a categorical model for a number of reasons. First, as stated above, is the 
+ability to extrapolate the odds of developing leukemia at levels other than those presented in the data, 
+but without going too far outside of the model scope. For example, we should not use this model to 
+estimate the proportion of leukemia among other levels at 500 units of radiation exposure. 
 
-becuase claerly lienar trend is better 
+Another reason is the relationship between midpoints and log odds of developing leukemia. 
+I took observed proportions of leukemia from the data and transformed them to the log-odds scale. 
 
-Avoid multiple comparisons 
 ```{R}
 
 viz_data <- 
@@ -241,23 +252,48 @@ viz_data$log_odds <- with(viz_data, log(prob/(1-prob)))
 ggplot(data = viz_data, 
        aes(x = seqn, 
            y = log_odds)) + geom_point() + geom_line() + 
-  geom_smooth(method = "lm", se = F)
+  geom_smooth(method = "lm", se = F) + 
+  theme_minimal() + 
+  
+  ylab("Log-Odds of developing leukemia") + 
+  xlab("Radiation exposure midpoint") + 
+  
+  ggtitle("Relationship between radiation exposure and \n the chance of developing leukemia") + 
+  scale_x_continuous(breaks = seq(from = 1, to = max(viz_data$seqn), by = 1),  
+                                  labels = as.factor(viz_data$labels))
 
 ```
+
+* As we can see, there a clear linear trend that can be modeled using a regression approach with a continuous 
+predictor. 
 
 **Deviance Comparison**
 
+We can also compare the two models using a likelihood ratio test. 
+
 ```{r}
 
-anova(prob3_glm)
-
-anova(prob3_glm.2)
-      
-anova(prob3_glm, prob3_glm.2, test='LR')
+anova(prob3_glm, prob3_glm.2, test='LR') %>% 
+  data.frame() %>% 
+  mutate(model = c("Categorical", "Midpoint")) %>% 
+  select(model, everything()) %>% 
+  kable(booktabs = T, 
+        align = c("l", rep('c', length(anova(prob3_glm, prob3_glm.2, test='LR') %>% data.frame()))), 
+        digits = 2
+          ) %>% 
+  kable_styling(position = 'center', latex_options = c('hold_position'))
 
 ```
 
+* Evidently, a model with a continuous predictor has lower deviance, however, the drop in deviance is 
+not statistically significant, so we can't conclude that using a continuous predictor lower deviance drastically.
+
 **Residual Plots**
+
+We can finally compare residuals for the two models. I use `R` to calculate and store pearson residuals for 
+two models, and display residual for each model at each respective level. Note that I used radiation
+midpoint on the x-axis. However, there is a one-to-one relationship between bucketed levels of ration 
+exposure and a midpoint for the bucket. Therefore, it is appropriate to use midpoint as a label. 
 
 ```{r}
 
@@ -268,25 +304,39 @@ rbind(
     prob3 %>%
     select(radiation_midpoint, radiation),
     data.frame(Residuals = residuals(prob3_glm, "deviance"), 
-               Model = rep("Categorical", nrow(prob3)))
+               Model = rep("Categorical", nrow(prob3)), 
+               seqn = seq(from = 1, to = nrow(prob3), by = 1))
     ),
   cbind(
     prob3 %>%
     select(radiation_midpoint, radiation),
     data.frame(Residuals = residuals(prob3_glm.2, "deviance"), 
-               Model = rep("Midpoint", nrow(prob3)))
+               Model = rep("Midpoint", nrow(prob3)), 
+               seqn = seq(from = 1, to = nrow(prob3), by = 1))
     )
 ) %>% 
 
-ggplot(aes(x = radiation_midpoint, 
+ggplot(aes(x = seqn, 
            y = Residuals, 
-           color = Model)) + geom_point(size = 2)
+           color = Model)) + geom_point(size = 2) +
+  scale_x_continuous(breaks = seq(from = 1, to = nrow(prob3), by = 1), 
+                     labels = unique(prob3$radiation_midpoint)) + 
+  theme_minimal() + 
+  ylab("Pearson Residuals") + 
+  xlab("Radiation Midpoint/Corresponding group of radiation exposure level") + 
+  ggtitle("Comparison of residuals for two models")
 
 
 ```
+* As we can see, a model with categorical predictors essentially does not produce any residuals. 
+This is reasonable because we fit a model using 6 observations, and fit one proportion per observation. 
+
+* However, a model with a midpoint continuous predictor shows behavior that is more expected of a regression model. We can see how our fit tends to underestimate log-odds of getting leukemia. 
+
+* Indeed, we saw of the figure above that, perhaps, a fit with the second order exponential may be more 
+appropriate. 
 
 ### (iv)
-
 
 ```{r recreate pivoted data to a long single obs data set}
 
@@ -459,6 +509,8 @@ alternative_ratio_odds_ratios <-
   (odds(p_100) / odds(p_199))/
   (odds(p_50) / odds(p_100) )
 
+delta_method_var <- (-50 * exp(-50 * betas[2]))^2 * vcov(prob3_glm.2)[2,2]
+
 ```
 
 
@@ -475,9 +527,14 @@ In order to obtain a confidence interval for the ratio of odds ratio we can take
 2. Use the delta method to calculate $\large Var(e^{\textbf a^T \boldsymbol{\hat \beta}})$ and then 
   calculate the 95% confidence interval using a standard error of the odds scale directly. 
   
+  Logistic regression model estimates are asymptotically normally distributed as a result of MLE estimation,
+  so we can directly apply the delta method, and obtain another normally distributed random variable.
+  
+  
+  
 For my own reference, I will use both methods, and validate that the results indeed match. 
 
-**Log odds confidence interval** 
+**Transformation of confidence interval bounds** 
 
 Using Jared's tip, we can calculate $\large Var(\textbf a^T \boldsymbol{\hat \beta})$ directly by taking 
 $\large a^T \textbf V a$ where $V$ is a variance-covariance matrix of the fitted logistic regression model. 
@@ -490,6 +547,28 @@ Then, the 95% confidence interval on the original scale is $\large \textbf a^T \
 Taking exponential of interval end point given us a confidence interval for the ratio of odds ratios. The 
 95% confidence interval is (`r round(exp(t(contr_vec) %*% betas - 1.96 * sqrt(var_aT_B)),6)`, `r round(exp(t(contr_vec) %*% betas + 1.96 * sqrt(var_aT_B)),6)`)
 
+**Delta method**
+
+Since $\large \boldsymbol{a^T}$ are constants, and $\large \boldsymbol{\hat \beta}$ is a random variable that 
+contain a sampling distribution and variance, we define $\large g(\boldsymbol{\hat \beta})= e^{\boldsymbol{a^T * \hat \beta}}$ in order to find $\large Var(e^{\boldsymbol{a^T * \hat \beta}})$
+
+First step is to take a derivative with respect to $\large \boldsymbol{\hat \beta}$. I will use notation 
+that is specific to our problem rather than a general form. 
+
+$\Large \frac{d}{d \hat \beta} g({\hat \beta}) = -50 * e ^{-50 * \hat \beta_1}$, therefore 
+
+$\Large Var(e^{\boldsymbol{a^T * \hat \beta}}) = Var(e^{-50 * \hat \beta}) = (-50 * e ^{-50 * \hat \beta_1})^2 * Var(\hat \beta)$ = `r round(delta_method_var , 6)`
+
+So, we can use a ratio of odds ratio of on the odds scale and calculate confidence interval for this 
+estimate using a square root of variance we just obtained. 
+
+So, the 95% confidence interval is given by: `r round(exp(t(contr_vec) %*% betas), 6)` $\pm 1.96 *$ `r round(sqrt(delta_method_var) , 6)`, giving us (`r round(exp(t(contr_vec) %*% betas)- 1.96 * sqrt(delta_method_var),6)`, `r round(exp(t(contr_vec) %*% betas) + 1.96 * sqrt(delta_method_var) ,6)`) 
+
+**Conclusion** 
+
+Both methods produce *almost* identical confidence intervals. An advantage of the delta method is knowing 
+variance of the ratios of odds ratios, which gives us a standard error. Sometimes, it is easier to interpret 
+and report this quantity to non-statisticians and other professionals. 
 
 <!-- 
 ALERT, ALERT!!! 
@@ -498,7 +577,6 @@ For Quarto chunk options to work we need to specify them on the line RIGHT AFTER
 Otherwise, knitter ignores the option
 
 --> 
-
 ```{r  bootstrap simmulation to get variance of odds ratios}
 #| eval: false
 
