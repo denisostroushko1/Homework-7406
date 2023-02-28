@@ -44,12 +44,12 @@ $$\Large \frac{exp(-7 + 0.1 * A + 1.2 * s + 0.3 * 1 + 0.2 *s * 1)}{exp(-7 + 0.1 
 
 $$\Large exp(0.3 + 0.2 * s)$$
 
-This odds ratio is the compares the effects of race on the likelihood of having cancer, while adjusting for 
+This odds ratio compares the effects of race on the likelihood of having cancer, while adjusting for 
 smoking. For black smokers, we have the highest chance of getting cancer, and white non-smokers have the lowest chance of getting cancer. 
 
 More precisely, black non-smokers are $exp(0.3) =$ `r round(exp(0.3), 4)` times more likely to have cancer, 
-while black smokers are $exp(0.3 + 0.2) =$ `r round(exp(0.3+0.2),4)` times more likely to have cancer, 
-after adjusting for other variables. 
+while black smokers are $exp(0.3 + 0.2) =$ `r round(exp(0.3+0.2),4)` times more likely to have cancer when 
+compared to the population of white non-smokers, after adjusting for other variables. 
 
 **$YR$ conditional odds ratio equation**
 
@@ -62,9 +62,26 @@ $$\Large = \frac{exp(-7 + 0.1 * A + 1.2 + 0.3*r + 0.2 * 1 * r)}{exp(-7 + 0.1*A +
 
 $$\Large exp(1.2 + 0.2 * r) $$
 
-So, smokers are $exp(1.2) =$ `r round(exp(1.2),4)` times more likely to have cancer when compared with non-smokers, after adjusting for other variables. Additionally, black smokers are $exp(1.2 + 0.2) =$ `r round(exp(1.2 + 0.2),4)` times more likely to have cancer, after adjusting for other variables. 
+So, white smokers are $exp(1.2) =$ `r round(exp(1.2),4)` times more likely to have cancer when compared with white non-smokers, after adjusting for other variables. Additionally, black smokers are $exp(1.2 + 0.2) =$ `r round(exp(1.2 + 0.2),4)` times more likely to have cancer when compared with white non-smokers, after adjusting for other variables. 
 
-MORE TO FINISH THE PROBLEM 
+**Coefficient of S additional interpretation** 
+
+We observed that the interaction term for smoking status and race indicator is statistically significant. 
+Therefore, interpretation of main effects of $S$ and $R$ is not meaningful without consideration of the interactions. We saw in the previous section of this problem that when race indicator is equal to 0, we 
+analyze model estimates for the sub-sample of study participants who are white. 
+
+Therefore, log-odds ratio for $S$ is $\large exp(1.2 + 0.2 * 2) = exp(1.2)$. Therefore, we compare white 
+smokers to white non-smokers. Setting $R$ to 1 means that we now compare black smoekrs to black non-smokers, 
+and we obtain a different odds ratio. 
+
+**Hypothesis interpretation for R and S**
+
+Both null hypotheses for $S$ and $R$ state that there is no main effect of smoking status or race on the likelihood of having cancer. As we can see, due to low p-values, we reject both hypotheses and conclude that 
+the main effect of smoking and race are statistically significant, and therefore change the likelihood of 
+having cancer. 
+
+However, as we already discussed, interpretation of main effects does not capture the entire story without 
+incorporating interaction terms into the interpretation. 
 
 # Problem 2
 
