@@ -347,6 +347,8 @@ other levels of radiation exposure is a big advantage over a model with categori
 Model is given 
 
 ```{r}
+#| label: mid-point-model
+#| tbl-cap: Model estimates with radiation midpoint level as a continuous  predictor
 
 prob3_glm.2 <- glm(formula = cbind(leukemia = prob3$leukemia, 
                     other = prob3$other) ~ prob3$radiation_midpoint , family = binomial(link = "logit"))
@@ -385,6 +387,8 @@ Another reason is the relationship between midpoints and log odds of developing 
 I took observed proportions of leukemia from the data and transformed them to the log-odds scale. 
 
 ```{R}
+#| label: raw_odds_plot
+#| fig-cap: Observed log-odds ratios at midpoint radiation exposure 
 
 viz_data <- 
   data.frame(
@@ -418,6 +422,8 @@ predictor.
 We can also compare the two models using a likelihood ratio test. 
 
 ```{r}
+#| label: deviance 
+#| tbl-cap: Comparison of Deviance statistics for the two candidate models 
 
 anova(prob3_glm, prob3_glm.2, test='LR') %>% 
   data.frame() %>% 
@@ -442,6 +448,8 @@ midpoint on the x-axis. However, there is a one-to-one relationship between buck
 exposure and a midpoint for the bucket. Therefore, it is appropriate to use midpoint as a label. 
 
 ```{r}
+#| label: residuals 
+#| fig-cap:  Pearson residuals for the two candidate models 
 
 ## somehow our factor model does not produce deviance residuals!! WHYYYY?? 
 
