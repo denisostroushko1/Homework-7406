@@ -20,6 +20,7 @@ execute:
 
 library(tidyverse)
 library(kableExtra)
+library(emmeans)
 
 ```
 
@@ -86,9 +87,13 @@ prob2 <-
 
 ```
 
-Stage 3 model summary table is: 
+Stage 3 model summary table given in @tbl-stage
+
+<!-- hallelujah this reference in Quarto PDF files works hell yaaaassss brotheeeeeeer -->
 
 ```{r}
+#| label: tbl-stage
+#| tbl-cap: Summary of the model 
 
 prob2_glm <- glm(M_num ~ E * P + G, data = prob2, family = binomial("logit"))
 
@@ -102,7 +107,8 @@ inter_p_val  <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coef
 
 summary(prob2_glm)$coefficients %>% 
   data.frame() %>% 
-  kable(booktabs = T)
+  kable(booktabs = T) %>% 
+  kable_styling(position = "center", latex_options = c("hold_position"))
   
 ```
 
@@ -158,8 +164,37 @@ prob3 <-
 
 ### (i)
 
+Before fitting the model we can evaluate proportion of leukemia cases in the population for each level of radiation exposure. We can see that the presence of leukemia is similar for the lowest three levels, and 
+starts to increase fast the higher exposure levels go. 
+
+```{r}
+#| label: leuk-summary
+#| tbl-cap: Obseved rates of leukemia by radiation exposure group 
+
+prob3 %>% 
+  mutate(
+    N = leukemia + other, 
+    leukemia_prop = paste0(round(leukemia/(leukemia + other),4) * 100, "%")
+  ) %>% 
+  
+  select(radiation, radiation_midpoint, N, leukemia_prop) %>% 
+
+  kable(booktabs = T, row.names = FALSE, 
+      align = 'c', 
+      col.names = c("Radiation Level", "Midpoint", "N Observations","Leukemia Proportion"), 
+      ) %>% 
+ kable_styling(position = "center", latex_options = c("hold_position"))
+
+
+```
+
+We can fit the model with exposure levels as categorical predictor. The model will provide comparisons of 
+each level to the baseline level, which had no exposure. We can then use pairwise comparisons to evalaute a 
+large family of comparisons. 
 
 ```{R}
+#| label: prob3-m1
+#| tbl-cap: Model estimates with radiation level as a categorical predictor
 
 prob3$radiation <- factor(prob3$radiation, 
                           levels = unique(prob3$radiation))
@@ -176,21 +211,132 @@ summary(prob3_glm)$coefficients %>%
          comps = case_when(
            comps == "cept)" ~ "Intercept", 
            TRUE ~ comps
-         )) %>% 
+         ), 
+         
+         odds_ratio = exp(Estimate)) %>% 
   
-  select(comps, everything()) %>% 
+  select(comps, Estimate, odds_ratio, everything()) %>% 
 
   kable(booktabs = T, row.names = FALSE, digits = 3, 
         align = c("l", rep('c', length(length(summary(prob3_glm)$coefficients %>% data.frame())))), 
-        col.names = c("Radiation Level", "Estimate", "Std. Error", "Z-value", "P-value"), 
+        col.names = c("Radiation Level", "Estimate", "Odds Ratio",  "Std. Error", "Z-value", "P-value"), 
         ) %>% 
-   kable_styling(position = "center")
+   kable_styling(position = "center", latex_options = c("hold_position"))
+
+comp_1 <-  round(exp((summary(prob3_glm)$coefficients %>% data.frame() %>% select(Estimate) )[5, ]), 4)
+comp_1_ci <- paste0("(", paste(round(exp(confint(prob3_glm)[5,]), 4), collapse = ", "), ")")
+
+comp_2 <-  round(exp((summary(prob3_glm)$coefficients %>% data.frame() %>% select(Estimate) )[6, ]), 4)
+comp_2_ci <- paste0("(", paste(round(exp(confint(prob3_glm)[6,]), 4), collapse = ", "), ")")
+  
+```
+
+* Looking at a small set of comparisons of each level of exposure to the referense level, people who 
+got 100-200 and 200+ units of exposure are at a much higher chance of developing leukemia, compared with those 
+who had no exposure to radiation. 
+
+* We are not able to conclude that the log odds of the event are different from the baseline for other levels of 
+exposure. 
+
+* The odds of having leukemia for those who got between 100 and 199 units of radiation when compared with those 
+who got no exposure are `r comp_1` times higher, bounded by the `r comp_1_ci` 95% confidence interval. 
+
+  Confidence interval does not include 1, having all values consistently above 1, therefore we have enough 
+  statistical evidence to conclude that those who got between 100 and 199 units of exposure are at a much higher 
+  risk of developing leukemia. 
+
+* Similarly, the odds of developing leukemia for those who got 200+ units of exposure compared to baseline 
+level are `r comp_2` times higher, bounded by the `r comp_2_ci` 95% confidence interval. 
+
+In the next section we evaluate pairwise comparisons of levels of exposure. 
+
+### (ii)
+
+```{r}
+
+em <- emmeans(prob3_glm, "radiation")
+contrast(em, "pairwise") %>% data.frame() -> comparisons
 
 ```
 
-INTERPRET ON ODDS SCALE, SO USE EXPOENENTIATED COEFFICIENTS
+We can perform `r nrow(comparisons)` pairwise comparisons for our model. 
 
-### (ii)
+Family Wise Error Rate is given as $P(At \ least \ one \ false \ positive) = 1 - P(no \ false \ rejections) = 1 - 0.95^{15} =$ `r round(1 - 0.95^15, 4)`.
+
+All possible comparisons are given below, the table is ordered from the lowest to the highest p-value: 
+
+```{r}
+#| label: pw-unadjusted
+#| tbl-cap: Pairwise unadjusted comparisons of odds ratios between radiation exposure levels
+
+comparisons %>% 
+  arrange(p.value) %>% 
+  select(-df, -z.ratio, -SE)  %>% 
+  mutate(odds_ratio = exp(estimate)) %>% 
+  select(contrast, estimate, odds_ratio, p.value) -> comparisons_f 
+
+comparisons_f %>% 
+  kable(booktabs = T, row.names = FALSE, digits = 3, 
+        align = c("l", rep('c', length(comparisons_f) - 1)), 
+        col.names = c("Contrast", "Estimate", "Odds Ratio", "P-value")
+        ) %>% 
+   kable_styling(position = "center", latex_options = c("hold_position"))
+  
+
+```
+
+Without controling for the multiple comparison, or multiple testing, error, we have `r length(which(comparisons$p.value < 0.05))` statistically significant comparisons at the 0.05 significance level.  
+**Holm-Bonferroni Adjustment** 
+
+In order to control FWER for `r nrow(comparisons)` comparisons we need to use the Holm - Bonferroni Stepdown Procedure. We present a table with contrasts one more time, including Holm adjusted p-values this time. 
+
+```{R}
+#| label: pw-holm 
+#| tbl-cap: Pairwise comparions of odds ratios adjusted using Holm procedure
+
+comparisons_f$holm_adj <- p.adjust(comparisons_f$p.value, method = "holm")
+
+comparisons_f %>% 
+  kable(booktabs = T, row.names = FALSE, digits = 3, 
+        align = c("l", rep('c', length(comparisons_f) - 1)), 
+        col.names = c("Contrast", "Estimate", "Odds Ratio", "P-value", "Holm Adjusted P-value")
+        ) %>% 
+   kable_styling(position = "center", latex_options = c("hold_position"))
+
+```
+
+Comments: 
+
+* How FWER adjustments prevents us from concluding one of the differeces is there 
+
+moving on
+
+**Benjamini-Hochberg Adjustment** 
+
+In order to control FDR for `r nrow(comparisons)` comparisons we need to use the Benjamini-Hochberg Adjustment Procedure. We present a table with contrasts one more time, including Holm adjusted p-values this time. 
+
+```{R}
+#| label: pw-bh
+#| tbl-cap: Pairwise comparions of odds ratios adjusted using BH procedure
+
+comparisons_f$hoch_adj <- p.adjust(comparisons_f$p.value, method = "BH")
+
+comparisons_f <- comparisons_f %>% select(-holm_adj)
+
+comparisons_f %>% 
+  kable(booktabs = T, row.names = FALSE, digits = 3, 
+        align = c("l", rep('c', length(comparisons_f) - 1)), 
+        col.names = c("Contrast", "Estimate", "Odds Ratio", "P-value", "BH Adjusted P-value")
+        ) %>% 
+   kable_styling(position = "center", latex_options = c("hold_position"))
+
+```
+
+Comments: 
+
+* Confirm that obserbed differences withiut adjustments are kind of true differences. 
+
+move on 
 
 ### (iii)
 
