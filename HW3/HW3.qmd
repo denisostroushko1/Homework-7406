@@ -99,12 +99,19 @@ prob2 <-
   prob2 %>% 
   
   mutate(
-    M_num = ifelse(M == "divorced", 0, 1)
+    Married_flag = ifelse(M == "divorced", 0, 1)
+  ) %>% 
+  
+  rename(
+    Married = M, 
+    Extramarrital_sex_ = E, 
+    Premarital_sex_ = P, 
+    Gender = G
   )
 
 ```
 
-Stage 3 model summary table given in @tbl-stage
+Stage 3 model summary table given in @tbl-stage. We will use this model to answer the two questions. 
 
 <!-- hallelujah this reference in Quarto PDF files works hell yaaaassss brotheeeeeeer -->
 
@@ -112,15 +119,19 @@ Stage 3 model summary table given in @tbl-stage
 #| label: tbl-stage
 #| tbl-cap: Summary of the model 
 
-prob2_glm <- glm(M_num ~ E * P + G, data = prob2, family = binomial("logit"))
+prob2_glm <- glm(Married_flag ~ Extramarrital_sex_ * Premarital_sex_ + Gender, 
+                 data = prob2, family = binomial("logit"))
 
-g_main <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GMale"][1]
-g_se   <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GMale"][2]
-g_p_val  <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GMale"][4]
+g_main <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GenderMale"][1]
+g_se   <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GenderMale"][2]
+g_p_val  <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "GenderMale"][4]
 
-inter_main <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "Eyes:Pyes"][1]
-inter_se   <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "Eyes:Pyes"][2]
-inter_p_val  <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == "Eyes:Pyes"][4]
+inter_main <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == 
+                                                "Extramarrital_sex_yes:Premarital_sex_yes"][1]
+inter_se   <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == 
+                                                "Extramarrital_sex_yes:Premarital_sex_yes"][1]
+inter_p_val  <- summary(prob2_glm)$coefficients[rownames(summary(prob2_glm)$coefficients) == 
+                                                "Extramarrital_sex_yes:Premarital_sex_yes"][1]
 
 summary(prob2_glm)$coefficients %>% 
   data.frame() %>% 
@@ -129,40 +140,37 @@ summary(prob2_glm)$coefficients %>%
   
 ```
 
-change all E, P, G,etc... to their real names for easier reading 
+**Effect of Gender**
 
-**Effect of G**
+In this section we evaluate how gender affects the likelihood of still being married.
 
 interpret effects of `r g_main` and use `r g_se` to get confidence intervals 
 if independent then their interaction must be non-significant 
 
-According to comments from TA we also need to state every
+1. Null hypothesis: $H_0:$ $\hat \beta_{G} = 0$, i.e. gender has no effect on the chances of still being marries
 
-test it: 
-
-1. Null hypothesis: $H_0:$ $\hat \beta_{G} = 0$
-
-1.1 Mull hyp in english 
-
-2. Alternative hypothesis: $H_a:$ $\hat \beta_{G} \neq 0$
-
-2.1 Alt hyp in english 
+2. Alternative hypothesis: $H_a:$ $\hat \beta_{G} \neq 0$, i.e. gender has a statistically significant effect 
+on the chances of still being marries
 
 3. Z statistic: $(\frac{\hat \beta - 0}{se(\hat \beta)})$ = `r round((g_main/g_se), 4)`
 
 4. P-value: `r round(g_p_val, 4)`
 
-5. Conclusion: There is enough statistical evidence to conclude that the effect 
+5. Conclusion: There is enough statistical evidence to conclude that the effect of gender on marital status
+is statistically significant. Using odds ratio, the odds for men to be married at the time of a survey are `r round(exp(g_main), 4)` times higher than the odds for women population, in the data, after adjusting for 
+other variables. 
 
 **Independence of E and P**
 
-if independent then their interaction must be non-significant 
+We will use the interaction terms to assess if the effects of extramarital sexual activity vary across the 
+different levels of premarital sexual activity. 
 
 test it: 
 
-1. Null hypothesis: $H_0:$ $\hat \beta_{E \ and \ P} = 0$
+1. Null hypothesis: $H_0:$ $\hat \beta_{E \ and \ P} = 0$, i.e. the effects of extramarital sexual activity 
+do not depend on the level of premarital sexual activity. 
 
-2. Alternative hypothesis: $H_a:$ $\hat \beta_{E \ and \ P} \neq 0$
+2. Alternative hypothesis: $H_a:$ $\hat \beta_{E \ and \ P} \neq 0$, i.e. the effects of extramarital sexual activity vary across the different levels of premarital sexual activity. 
 
 3. Z statistic: $(\frac{\hat \beta - 0}{se(\hat \beta)})$ = `r round((inter_main/inter_se), 4)`
 
@@ -171,6 +179,16 @@ test it:
 5. Conclusion: Effects of $E$ and $P$ are not independent of each, as evidenced by the low p-value and big 
 z-statistic. Therefore, we can conclude that effects of variable $E$ have varying effects on the outcome 
 $M$, depending on the levels of variable $P$, after adjusting for other variables. 
+
+Main effect for these predictive factors compare the the likelihood of being married for those who engage in 
+extramarital activities against those who did not. 
+
+Since the model estimate is positive, we can conclude that those who were involved in premarital sexual activity with their partner are much more likely to still be married. 
+
+Even more simply put, if you engaged in extramarital activity, it is highly unlikely that you still would be 
+married after filing for a divorce. However, for this subset of population, those who were involved in 
+premarital sexual activity with their partner were more likely to still be married when compared with those
+who did extramarital relationships but not premarital. 
 
 # Problem 3
 
@@ -182,10 +200,11 @@ prob3 <-
 ### (i)
 
 Before fitting the model we can evaluate proportion of leukemia cases in the population for each level of radiation exposure. We can see that the presence of leukemia is similar for the lowest three levels, and 
-starts to increase fast the higher exposure levels go. 
+starts to increase fast the higher exposure levels go. @tbl-leuk-summary shows that as radiation 
+exposure increases, the chances of leukemia increases compared to other types of cancer. 
 
 ```{r}
-#| label: leuk-summary
+#| label: tbl-leuk-summary
 #| tbl-cap: Obseved rates of leukemia by radiation exposure group 
 
 prob3 %>% 
@@ -206,11 +225,10 @@ prob3 %>%
 ```
 
 We can fit the model with exposure levels as categorical predictor. The model will provide comparisons of 
-each level to the baseline level, which had no exposure. We can then use pairwise comparisons to evalaute a 
-large family of comparisons. 
+each level to the baseline level, which had no exposure, as shown in @tbl-prob3-m1. We can then use pairwise comparisons to evaluate a large family of comparisons. 
 
-```{R}
-#| label: prob3-m1
+```{r}
+#| label: tbl-prob3-m1
 #| tbl-cap: Model estimates with radiation level as a categorical predictor
 
 prob3$radiation <- factor(prob3$radiation, 
@@ -280,10 +298,12 @@ We can perform `r nrow(comparisons)` pairwise comparisons for our model.
 
 Family Wise Error Rate is given as $P(At \ least \ one \ false \ positive) = 1 - P(no \ false \ rejections) = 1 - 0.95^{15} =$ `r round(1 - 0.95^15, 4)`.
 
-All possible comparisons are given below, the table is ordered from the lowest to the highest p-value: 
+All possible comparisons are given in @tbl-pw-unadjusted, the table is ordered from the lowest to the highest p-value. 
+
+Without controlling for the multiple comparison, or multiple testing, error, we have `r length(which(comparisons$p.value < 0.05))` statistically significant comparisons at the 0.05 significance level.  
 
 ```{r}
-#| label: pw-unadjusted
+#| label: tbl-pw-unadjusted
 #| tbl-cap: Pairwise unadjusted comparisons of odds ratios between radiation exposure levels
 
 comparisons %>% 
@@ -302,13 +322,12 @@ comparisons_f %>%
 
 ```
 
-Without controling for the multiple comparison, or multiple testing, error, we have `r length(which(comparisons$p.value < 0.05))` statistically significant comparisons at the 0.05 significance level.  
 **Holm-Bonferroni Adjustment** 
 
-In order to control FWER for `r nrow(comparisons)` comparisons we need to use the Holm - Bonferroni Stepdown Procedure. We present a table with contrasts one more time, including Holm adjusted p-values this time. 
+In order to control FWER for `r nrow(comparisons)` comparisons we need to use the Holm - Bonferroni Stepdown Procedure. We present contrasts one more time, including Holm adjusted p-values this time in @tbl-pw-holm. 
 
 ```{R}
-#| label: pw-holm 
+#| label: tbl-pw-holm 
 #| tbl-cap: Pairwise comparions of odds ratios adjusted using Holm procedure
 
 comparisons_f$holm_adj <- p.adjust(comparisons_f$p.value, method = "holm")
@@ -324,16 +343,16 @@ comparisons_f %>%
 
 Comments: 
 
-* How FWER adjustments prevents us from concluding one of the differeces is there 
-
-moving on
+* As we can see, a comparison of 50 to 99 radiation exposure level to  200 plus radiation exposure level 
+is deemed not statistically significant using a Hold adjustment method. All other three comparisons 
+are still statistically significant. 
 
 **Benjamini-Hochberg Adjustment** 
 
-In order to control FDR for `r nrow(comparisons)` comparisons we need to use the Benjamini-Hochberg Adjustment Procedure. We present a table with contrasts one more time, including Holm adjusted p-values this time. 
+In order to control FDR for `r nrow(comparisons)` comparisons we need to use the Benjamini-Hochberg Adjustment Procedure. We present a table with contrasts one more time, including BH adjusted p-values this time. 
 
 ```{R}
-#| label: pw-bh
+#| label: tbl-pw-bh
 #| tbl-cap: Pairwise comparions of odds ratios adjusted using BH procedure
 
 comparisons_f$hoch_adj <- p.adjust(comparisons_f$p.value, method = "BH")
@@ -351,9 +370,14 @@ comparisons_f %>%
 
 Comments: 
 
-* Confirm that obserbed differences withiut adjustments are kind of true differences. 
+* We can see that the BH adjustment procedure that controls for FDR. As we know, this type of adjustment of 
+p-value is more relaxed that FWER control methods. Perhaps, this is why we have *all four* original contrasts 
+still being statistically significant here. 
 
-move on 
+  I say *all four* because `50 to 99` - `200 plus` radiation exposure is just slightly over the 0.05 
+  pre specified significance level, so we should consider that this contrast provides us with 
+  meaningful information. 
+
 
 ### (iii)
 
@@ -361,10 +385,10 @@ First, let's fit the model that uses a midpoint radiation exposure as a continuo
 of developing leukemia. Being able to estimate and extrapolate chances of developing leukemia given some 
 other levels of radiation exposure is a big advantage over a model with categorical predictors.
 
-Model is given 
+@tbl-mid-point-model shows the effect of midpoint continuous variable on the log-odds of developing leukemia.
 
 ```{r}
-#| label: mid-point-model
+#| label: tbl-mid-point-model
 #| tbl-cap: Model estimates with radiation midpoint level as a continuous  predictor
 
 prob3_glm.2 <- glm(formula = cbind(leukemia = prob3$leukemia, 
@@ -403,8 +427,10 @@ estimate the proportion of leukemia among other levels at 500 units of radiation
 Another reason is the relationship between midpoints and log odds of developing leukemia. 
 I took observed proportions of leukemia from the data and transformed them to the log-odds scale. 
 
+@fig-raw-odds-plot Shows that the linear fit is more than adequate for these data. 
+
 ```{R}
-#| label: raw_odds_plot
+#| label: fig-raw-odds-plot
 #| fig-cap: Observed log-odds ratios at midpoint radiation exposure 
 
 viz_data <- 
@@ -431,15 +457,13 @@ ggplot(data = viz_data,
 
 ```
 
-* As we can see, there a clear linear trend that can be modeled using a regression approach with a continuous 
-predictor. 
-
 **Deviance Comparison**
 
-We can also compare the two models using a likelihood ratio test. 
+We can also compare the two models using a likelihood ratio test. @tbl-deviance provides a summary of the 
+likelihood ratio test between the two models.
 
 ```{r}
-#| label: deviance 
+#| label: tbl-deviance 
 #| tbl-cap: Comparison of Deviance statistics for the two candidate models 
 
 anova(prob3_glm, prob3_glm.2, test='LR') %>% 
@@ -461,11 +485,11 @@ not statistically significant, so we can't conclude that using a continuous pred
 
 We can finally compare residuals for the two models. I use `R` to calculate and store pearson residuals for 
 two models, and display residual for each model at each respective level. Note that I used radiation
-midpoint on the x-axis. However, there is a one-to-one relationship between bucketed levels of ration 
-exposure and a midpoint for the bucket. Therefore, it is appropriate to use midpoint as a label. 
+midpoint on the x-axis for @fig-residuals. However, there is a one-to-one relationship between bucketed levels of ration 
+exposure and a midpoint for the bucket, as shown in @tbl-leuk-summary, therefore, it is appropriate to use midpoint as a label without causing confusion. 
 
 ```{r}
-#| label: residuals 
+#| label: fig-residuals 
 #| fig-cap:  Pearson residuals for the two candidate models 
 
 ## somehow our factor model does not produce deviance residuals!! WHYYYY?? 
@@ -499,6 +523,7 @@ ggplot(aes(x = seqn,
 
 
 ```
+
 * As we can see, a model with categorical predictors essentially does not produce any residuals. 
 This is reasonable because we fit a model using 6 observations, and fit one proportion per observation. 
 

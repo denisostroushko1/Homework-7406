@@ -102,8 +102,8 @@ print(paste0("Mean: ", round(mean(boot_results$diff), 4), " | Quantile C.I.: (" 
 # (III)
 
 # summary of this approach: take the difference of booted 
-# take quatiles of the difference 
-# then take away true differnece from each quatile 
+# take quartile of the difference 
+# then take away true difference from each quartile 
 
 # true difference 
 true_fit_1 <- summary(fit1_true)$coefficients[rownames(summary(fit1_true)$coefficients) == "treatment"][1]
