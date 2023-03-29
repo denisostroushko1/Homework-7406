@@ -1,0 +1,309 @@
+---
+title: "Homework 4"
+author: "Denis Ostroushko"
+format: 
+  pdf:
+    toc: false
+    number-sections: false
+    colorlinks: true
+editor: source
+execute: 
+  eval: true
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+```
+
+# Problem 1
+
+
+
+```{R}
+
+fpath <- "https://jaredhuling.org/data/pubh7406/thall_and_vail_1990.dat"
+
+seiz <- read.table(fpath, header=TRUE)
+
+## sum up seizures across visits
+seiz_total <- 
+  seiz %>%
+    group_by(id) %>%
+    dplyr::summarize(
+      seiz = sum(seiz),
+      age = age[1],
+      base = base[1],
+      log_base = log(base/4),
+      treat = treat[1]
+      )
+
+```
+
+### (1)
+
+
+```{r}
+f1 <- glm(seiz ~ log(age)+log_base+treat, data = seiz_total, family = poisson())
+fq1 <- glm(seiz ~ log(age)+log_base+treat, data = seiz_total, family = quasipoisson())
+
+
+summary(f1)
+summary(fq1)
+
+var_coef_f1 <- diag(vcov(f1))
+var_coef_fq1 <- diag(vcov(fq1))
+
+var_coef_f1
+var_coef_fq1
+
+var_coef_fq1 / var_coef_f1
+
+```
+
+### (2)
+
+```{r}
+
+N_iter <- 500
+
+results <- 
+  data.frame(
+    i = seq(1,N_iter, by = 1), 
+    intercept_b = rep(NA, N_iter),
+    log_age_b = rep(NA, N_iter), 
+    log_base_b = rep(NA, N_iter), 
+    treat_b = rep(NA, N_iter)
+  )
+
+set.seed(1)
+
+for(i in 1:N_iter){
+  
+  temp_m <- glm(seiz ~ log(age)+log_base+treat, 
+                data = seiz_total[sample(rownames(seiz_total), replace= T), ], 
+                family = poisson())
+  
+  results$intercept_b[i] = coef(temp_m)[1]
+  results$log_age_b[i] = coef(temp_m)[2]
+  results$log_base_b[i] = coef(temp_m)[3]
+  results$treat_b[i] = coef(temp_m)[4]
+
+}
+
+
+```
+
+### (3)
+
+Bias = average of bootsrap - fitted coefficient 
+
+```{r}
+boot_beta <- 
+  results %>% 
+    summarise(across(.cols = c("intercept_b", "log_age_b", "log_base_b", "treat_b"), .fns = mean))
+
+coef(f1)
+
+# bias
+
+boot_beta - coef(f1)
+
+```
+### (4)
+
+```{R}
+
+sampling_dist_plot <- 
+  function(variable, control){
+         
+      pretty_name <- 
+        case_when(
+          variable == 'log_age_b' ~ "Log( Age )", 
+          variable == 'log_base_b' ~ "Log( Baseline Seizures )", 
+          variable == 'treat_b' ~ "Treatment"
+        )
+    
+      ggplot(data = results, 
+             aes_string(x = variable)) + 
+        geom_histogram(
+          aes(y =..density..),
+          bins = 
+            ceiling(control/(max(results[,variable]) - min(results[,variable])) ), 
+          fill = "grey", 
+          color = "black"
+        ) + 
+      
+      stat_function(fun = dnorm, args = list(mean = mean(results[,variable]), 
+                                             sd = sd(results[,variable])), 
+                    aes(color = "Normal Distribution \nwith Mean and Variance \nfrom Observed Data"), 
+                    size = 1
+                    ) + 
+      theme_minimal() + 
+      
+      scale_color_discrete(name = "") + 
+      
+      ylab("") + 
+      xlab(
+        paste0("Sampling Distribtuion of ", pretty_name, " coefficient")
+        )
+  }
+
+```
+
+
+
+```{r}
+
+# normal approximation C.I. 
+
+normal_approx <- 
+  function(coef, boot_se){
+    
+    paste0(
+      "(", 
+      round(coef - qt(p = 0.975, df = nrow(seiz_total) - 1) * boot_se ,2) , 
+      ", ", 
+      round(coef + qt(p = 0.975, df = nrow(seiz_total) - 1) * boot_se ,2), 
+      ")"
+    )
+    
+  }
+
+```
+
+
+**Log (Age)**
+
+```{r}
+#| fig-cap: "Sampling Distribution of Log(Age) regression coefficient" 
+#| label: fig-log-age
+sampling_dist_plot(variable = 'log_age_b', control = 100)
+```
+
+1. Normal Approximation Method C.I. for Log (Age)
+
+```{r}
+normal_approx(coef = coef(f1)[2], boot_se = sd(results$log_age_b))
+```
+
+2. Percentile Method C.I. for Log (Age)
+
+```{r}
+quantile(results$log_age_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(fq1)[2,]
+```
+
+**Log (Baseline Seizures)**
+
+```{r}
+#| fig-cap: "Sampling Distribution of Log(Baseline Seizures) regression coefficient" 
+#| label: fig-log-seiz
+sampling_dist_plot(variable = 'log_base_b', control = 30)
+```
+
+1. Normal Approximation Method C.I. for Log (Baseline Seizures)
+
+```{r}
+normal_approx(coef = coef(f1)[3], boot_se = sd(results$log_base_b))
+```
+
+2. Percentile Method C.I. for Log (Baseline Seizures)
+
+```{r}
+quantile(results$log_base_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(fq1)[3,]
+```
+
+**Treatment**
+
+```{r}
+#| fig-cap: "Sampling Distribution of Treatment regression coefficient" 
+#| label: fig-treat
+sampling_dist_plot(variable = 'treat_b', control = 30)
+```
+
+1. Normal Approximation Method C.I. for Treatment
+
+```{r}
+normal_approx(coef = coef(f1)[4], boot_se = sd(results$treat_b))
+```
+
+2. Percentile Method C.I. for Log Treatment
+
+```{r}
+quantile(results$treat_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(fq1)[4,]
+```
+
+### (5)
+
+```{r}
+
+int_model <- glm(seiz ~ log(age)*log_base*treat, data = seiz_total, family = poisson())
+
+summary(int_model)
+
+```
+
+
+```{r}
+
+N_iter <- 500
+
+results <- 
+  data.frame(
+    i = seq(1,N_iter, by = 1), 
+    intercept_b = rep(NA, N_iter),
+    log_age_b = rep(NA, N_iter), 
+    log_base_b = rep(NA, N_iter), 
+    treat_b = rep(NA, N_iter),
+    log_age_log_base_int_b = rep(NA, N_iter),
+    log_age_treat_int_b = rep(NA, N_iter), 
+    log_age_log_base_treat_int_b = rep(NA, N_iter)
+    
+  )
+
+set.seed(1)
+
+for(i in 1:N_iter){
+  
+  temp_m <- glm(seiz ~log(age)*log_base*treat, 
+                data = seiz_total[sample(rownames(seiz_total), replace= T), ], 
+                family = poisson())
+  
+  results$intercept_b[i] = coef(temp_m)[1]
+  results$log_age_b[i] = coef(temp_m)[2]
+  results$log_base_b[i] = coef(temp_m)[3]
+  results$treat_b[i] = coef(temp_m)[4]
+  results$log_age_log_base_int_b[i] = coef(temp_m)[5]
+  results$log_age_treat_int_b[i] = coef(temp_m)[6]
+  results$log_age_log_base_treat_int_b[i] = coef(temp_m)[7]
+
+}
+
+
+```
+
+**Comparison with simpler additive model** 
+
+
+
+# Problem 2
