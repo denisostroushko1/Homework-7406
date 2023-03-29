@@ -16,6 +16,7 @@ execute:
 
 ```{r}
 library(tidyverse)
+library(kableExtra)
 ```
 
 # Problem 1
@@ -268,7 +269,7 @@ summary(int_model)
 
 N_iter <- 500
 
-results <- 
+results_int <- 
   data.frame(
     i = seq(1,N_iter, by = 1), 
     intercept_b = rep(NA, N_iter),
@@ -289,13 +290,13 @@ for(i in 1:N_iter){
                 data = seiz_total[sample(rownames(seiz_total), replace= T), ], 
                 family = poisson())
   
-  results$intercept_b[i] = coef(temp_m)[1]
-  results$log_age_b[i] = coef(temp_m)[2]
-  results$log_base_b[i] = coef(temp_m)[3]
-  results$treat_b[i] = coef(temp_m)[4]
-  results$log_age_log_base_int_b[i] = coef(temp_m)[5]
-  results$log_age_treat_int_b[i] = coef(temp_m)[6]
-  results$log_age_log_base_treat_int_b[i] = coef(temp_m)[7]
+  results_int$intercept_b[i] = coef(temp_m)[1]
+  results_int$log_age_b[i] = coef(temp_m)[2]
+  results_int$log_base_b[i] = coef(temp_m)[3]
+  results_int$treat_b[i] = coef(temp_m)[4]
+  results_int$log_age_log_base_int_b[i] = coef(temp_m)[5]
+  results_int$log_age_treat_int_b[i] = coef(temp_m)[6]
+  results_int$log_age_log_base_treat_int_b[i] = coef(temp_m)[7]
 
 }
 
@@ -304,6 +305,90 @@ for(i in 1:N_iter){
 
 **Comparison with simpler additive model** 
 
+```{R}
+#| label: tbl-coef-comp
+#| fig-cap: "Comparison of coefficients and standard errors from bootrapp iterations" 
+#| 
+###################
+# coefficients and standard errors from bootsrap from the interative model 
 
+int_model_coef <- 
+  
+  results_int %>% 
+    summarize(
+      across(
+        .cols = c('log_age_b', 'log_base_b', 'treat_b', 
+                  'log_age_log_base_int_b', 'log_age_treat_int_b', 'log_age_log_base_treat_int_b'), 
+        .fns = list(mean, sd)
+    )) 
+
+mean_int <- int_model_coef[c(1,3,5,7,9,11)]
+var_names <- names(mean_int)
+names(mean_int) <- NULL
+
+sd_int <- int_model_coef[c(2,4,6,8,10,12)]
+names(sd_int) <- NULL
+
+int_model_coef_f <- 
+  data.frame(
+    names = var_names, 
+    int_mean = t(mean_int) , 
+    int_sd = t(sd_int)
+  )
+
+
+####################
+# coefficients and standard errors from boostrapp from the additive model 
+
+
+add_model_coef <- 
+  
+  results %>% 
+    summarize(
+      across(
+        .cols = c('log_age_b', 'log_base_b', 'treat_b'), 
+        .fns = list(mean, sd)
+    )) 
+
+mean_add <- add_model_coef[c(1,3,5)]
+var_names <- names(mean_add)
+names(mean_add) <- NULL
+
+sd_add <- add_model_coef[c(2,4,6)]
+names(sd_add) <- NULL
+
+add_model_coef_f <- 
+  data.frame(
+    names = var_names, 
+    add_mean = t(mean_add) , 
+    add_sd = t(sd_add)
+  )
+
+coef_from_two_model <- 
+  int_model_coef_f %>% 
+  left_join(
+    add_model_coef_f, 
+    by = "names", 
+    all = T
+  ) %>% 
+  
+  mutate(
+    pretty_names = c("Log(Age)", "Log(Baseline Seizures)", "Treatment", "Log(Age):Log(Baseline Seizures)", 
+                     "Log(Age):Treatment", "Log(Age):Log(Baseline Seizures):Treatment")
+  ) %>% 
+  
+  select(pretty_names, everything(), -names) 
+
+coef_from_two_model %>% 
+  
+  kable(booktabs = T, 
+        align = c('l', rep('c', (length(coef_from_two_model)-1))), 
+        digits = 2, 
+        col.names = c("Model Terms", "Beta from Model w/ Interactions", "SE of Beta from Model w/ Interactions",
+                      "Beta from Simple Model", "SE of Beta from Simple Model")) %>% 
+  kable_styling(latex_options = c("condenced", "striped", "hold_position"), 
+                full_width = F) %>% 
+  column_spec(1:length(coef_from_two_model), width = "3cm")
+```
 
 # Problem 2
