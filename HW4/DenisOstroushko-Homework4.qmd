@@ -68,7 +68,7 @@ var_coef_fq1 / var_coef_f1
 
 ```{r}
 
-N_iter <- 500
+N_iter <- 1000
 
 results <- 
   data.frame(
@@ -118,27 +118,30 @@ boot_beta - coef(f1)
 ```{R}
 
 sampling_dist_plot <- 
-  function(variable, control){
+  function(res_data, variable){
          
       pretty_name <- 
         case_when(
           variable == 'log_age_b' ~ "Log( Age )", 
           variable == 'log_base_b' ~ "Log( Baseline Seizures )", 
-          variable == 'treat_b' ~ "Treatment"
+          variable == 'treat_b' ~ "Treatment", 
+          variable == 'log_age_log_base_int_b' ~ "Log(Age):Log(Base. Seizures) Interaction",
+          variable == 'log_age_treat_int_b' ~ "Log(Age):Treatment Interaction",
+          variable == 'log_base_treat_b' ~ "Log(Base. Seizures):Treatment Interaction",
+          variable == 'log_age_log_base_treat_int_b' ~ "Three-way Interaction"
         )
     
-      ggplot(data = results, 
+      ggplot(data = res_data, 
              aes_string(x = variable)) + 
         geom_histogram(
           aes(y =..density..),
-          bins = 
-            ceiling(control/(max(results[,variable]) - min(results[,variable])) ), 
+          bins = 20 , 
           fill = "grey", 
           color = "black"
         ) + 
       
-      stat_function(fun = dnorm, args = list(mean = mean(results[,variable]), 
-                                             sd = sd(results[,variable])), 
+      stat_function(fun = dnorm, args = list(mean = mean(res_data[,variable]), 
+                                             sd = sd(res_data[,variable])), 
                     aes(color = "Normal Distribution \nwith Mean and Variance \nfrom Observed Data"), 
                     size = 1
                     ) + 
@@ -161,16 +164,16 @@ sampling_dist_plot <-
 # normal approximation C.I. 
 
 normal_approx <- 
-  function(coef, boot_se){
+  function(coef, boot_se, rounding = 5){
     
-    paste0(
-      "(", 
-      round(coef - qt(p = 0.975, df = nrow(seiz_total) - 1) * boot_se ,2) , 
-      ", ", 
-      round(coef + qt(p = 0.975, df = nrow(seiz_total) - 1) * boot_se ,2), 
-      ")"
+    vec = c(
+      round(coef - qt(p = 0.975, df = nrow(seiz_total) - 1) * boot_se , rounding),
+      round(coef + qt(p = 0.975, df = nrow(seiz_total) - 1) * boot_se , rounding)
     )
     
+   names(vec) <- c("2.5%", "97.5%")
+    
+   return(vec)
   }
 
 ```
@@ -181,16 +184,17 @@ normal_approx <-
 ```{r}
 #| fig-cap: "Sampling Distribution of Log(Age) regression coefficient" 
 #| label: fig-log-age
-sampling_dist_plot(variable = 'log_age_b', control = 100)
+#| fig-width: 8
+sampling_dist_plot(res_data = results, variable = 'log_age_b')
 ```
 
-1. Normal Approximation Method C.I. for Log (Age)
+1. Normal Approximation Method
 
 ```{r}
 normal_approx(coef = coef(f1)[2], boot_se = sd(results$log_age_b))
 ```
 
-2. Percentile Method C.I. for Log (Age)
+2. Percentile Method
 
 ```{r}
 quantile(results$log_age_b, p = c(0.025, 0.975))
@@ -207,16 +211,17 @@ confint(fq1)[2,]
 ```{r}
 #| fig-cap: "Sampling Distribution of Log(Baseline Seizures) regression coefficient" 
 #| label: fig-log-seiz
-sampling_dist_plot(variable = 'log_base_b', control = 30)
+#| fig-width: 8
+sampling_dist_plot(res_data = results, variable = 'log_base_b')
 ```
 
-1. Normal Approximation Method C.I. for Log (Baseline Seizures)
+1. Normal Approximation Method
 
 ```{r}
 normal_approx(coef = coef(f1)[3], boot_se = sd(results$log_base_b))
 ```
 
-2. Percentile Method C.I. for Log (Baseline Seizures)
+2. Percentile Method
 
 ```{r}
 quantile(results$log_base_b, p = c(0.025, 0.975))
@@ -233,16 +238,17 @@ confint(fq1)[3,]
 ```{r}
 #| fig-cap: "Sampling Distribution of Treatment regression coefficient" 
 #| label: fig-treat
-sampling_dist_plot(variable = 'treat_b', control = 30)
+#| fig-width: 8
+sampling_dist_plot(res_data = results, variable = 'treat_b')
 ```
 
-1. Normal Approximation Method C.I. for Treatment
+1. Normal Approximation Method
 
 ```{r}
 normal_approx(coef = coef(f1)[4], boot_se = sd(results$treat_b))
 ```
 
-2. Percentile Method C.I. for Log Treatment
+2. Percentile Method
 
 ```{r}
 quantile(results$treat_b, p = c(0.025, 0.975))
@@ -259,15 +265,12 @@ confint(fq1)[4,]
 ```{r}
 
 int_model <- glm(seiz ~ log(age)*log_base*treat, data = seiz_total, family = poisson())
-
-summary(int_model)
+quasi_int_model <- glm(seiz ~ log(age)*log_base*treat, data = seiz_total, family = quasipoisson())
 
 ```
 
 
 ```{r}
-
-N_iter <- 500
 
 results_int <- 
   data.frame(
@@ -278,6 +281,7 @@ results_int <-
     treat_b = rep(NA, N_iter),
     log_age_log_base_int_b = rep(NA, N_iter),
     log_age_treat_int_b = rep(NA, N_iter), 
+    log_base_treat_b = rep(NA, N_iter), 
     log_age_log_base_treat_int_b = rep(NA, N_iter)
     
   )
@@ -296,7 +300,8 @@ for(i in 1:N_iter){
   results_int$treat_b[i] = coef(temp_m)[4]
   results_int$log_age_log_base_int_b[i] = coef(temp_m)[5]
   results_int$log_age_treat_int_b[i] = coef(temp_m)[6]
-  results_int$log_age_log_base_treat_int_b[i] = coef(temp_m)[7]
+  results_int$log_base_treat_b[i] = coef(temp_m)[7]
+  results_int$log_age_log_base_treat_int_b[i] = coef(temp_m)[8]
 
 }
 
@@ -307,7 +312,7 @@ for(i in 1:N_iter){
 
 ```{R}
 #| label: tbl-coef-comp
-#| fig-cap: "Comparison of coefficients and standard errors from bootrapp iterations" 
+#| tbl-cap: "Comparion of fitted and boostrapped model parameters"
 #| 
 ###################
 # coefficients and standard errors from bootsrap from the interative model 
@@ -318,15 +323,16 @@ int_model_coef <-
     summarize(
       across(
         .cols = c('log_age_b', 'log_base_b', 'treat_b', 
-                  'log_age_log_base_int_b', 'log_age_treat_int_b', 'log_age_log_base_treat_int_b'), 
+                  'log_age_log_base_int_b', 'log_age_treat_int_b', 
+                  "log_base_treat_b",'log_age_log_base_treat_int_b'), 
         .fns = list(mean, sd)
     )) 
 
-mean_int <- int_model_coef[c(1,3,5,7,9,11)]
+mean_int <- int_model_coef[seq(from = 1, to = (length(int_model_coef)-1), by = 2)]
 var_names <- names(mean_int)
 names(mean_int) <- NULL
 
-sd_int <- int_model_coef[c(2,4,6,8,10,12)]
+sd_int <- int_model_coef[seq(from = 2, to = (length(int_model_coef)), by = 2)]
 names(sd_int) <- NULL
 
 int_model_coef_f <- 
@@ -374,21 +380,249 @@ coef_from_two_model <-
   
   mutate(
     pretty_names = c("Log(Age)", "Log(Baseline Seizures)", "Treatment", "Log(Age):Log(Baseline Seizures)", 
-                     "Log(Age):Treatment", "Log(Age):Log(Baseline Seizures):Treatment")
+                     "Log(Age):Treatment", "Log(Baseline Seizures_:Treatment",
+                     "Log(Age):Log(Baseline Seizures):Treatment")
   ) %>% 
   
-  select(pretty_names, everything(), -names) 
+  select(-names) 
+
+coef_from_two_model$fitted_vals <- coef(int_model)[-1]
+coef_from_two_model$fitted_se <- coefficients(summary(int_model))[-1,2]
+
+
+coef_from_two_model$fitted_vals_q <- coef(quasi_int_model)[-1]
+coef_from_two_model$fitted_se_q <- coefficients(summary(quasi_int_model))[-1,2]
+
+coef_from_two_model <- 
+  coef_from_two_model %>% 
+  select(
+    pretty_names, 
+    
+    fitted_vals, fitted_se,
+    
+    fitted_vals_q, fitted_se_q, 
+    
+    int_mean, int_sd, 
+    
+    add_mean, add_sd
+    
+  )
 
 coef_from_two_model %>% 
   
   kable(booktabs = T, 
+    #    caption = "Comparion of fitted and boostrapped model parameters", 
+        linesep = "\\addlinespace", 
         align = c('l', rep('c', (length(coef_from_two_model)-1))), 
         digits = 2, 
-        col.names = c("Model Terms", "Beta from Model w/ Interactions", "SE of Beta from Model w/ Interactions",
-                      "Beta from Simple Model", "SE of Beta from Simple Model")) %>% 
+        col.names = c("Model Terms",  
+                      "Beta", "SE", 
+                      "Beta", "SE", 
+                      "Avg. Beta", "SE",
+                      "Avg. Beta", "SE"
+                      )) %>% 
   kable_styling(latex_options = c("condenced", "striped", "hold_position"), 
                 full_width = F) %>% 
-  column_spec(1:length(coef_from_two_model), width = "3cm")
+  column_spec(2:length(coef_from_two_model), width = "1cm") %>%
+  column_spec(1, width = "4cm") %>% 
+  add_header_above(c(" " = 1,
+                     "Poisson \nFitted Values" = 2, 
+                     "Quasipoisson \nFitted Values" = 2, 
+                     "Bootsrapp Model \nwith Interaction" = 2, 
+                     "Boostrapp \nSimple Model" = 2
+                     ))
+
+
+```
+
+
+**Log (Age)**
+
+```{r}
+#| fig-cap: "Sampling Distribution of Log(Age) regression coefficient from a model with interaction terms" 
+#| label: fig-log-age-int
+#| fig-width: 8
+sampling_dist_plot(res_data = results_int, variable = 'log_age_b')
+```
+
+1. Normal Approximation Method
+
+```{r}
+normal_approx(coef = coef(int_model)[2], boot_se = sd(results_int$log_age_b))
+```
+
+2. Percentile Method
+
+```{r}
+quantile(results_int$log_age_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(quasi_int_model)[2,]
+```
+
+**Log (Baseline Seizures)**
+
+```{r}
+#| fig-cap: "Sampling Distribution of Log(Base) regression coefficient from a model with interaction terms" 
+#| label: fig-log-base-int
+#| fig-width: 8
+sampling_dist_plot(res_data = results_int, variable = 'log_base_b')
+```
+
+1. Normal Approximation Method
+
+```{r}
+normal_approx(coef = coef(int_model)[3], boot_se = sd(results_int$log_base_b))
+```
+
+2. Percentile Method C.I. 
+
+```{r}
+quantile(results_int$log_base_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(quasi_int_model)[3,]
+```
+
+**Treatment**
+
+```{r}
+#| fig-cap: "Sampling Distribution of Treatment regression coefficient from a model with interaction terms" 
+#| label: fig-treat-int
+#| fig-width: 8
+sampling_dist_plot(res_data = results_int, variable = 'treat_b')
+```
+
+1. Normal Approximation Method
+
+```{r}
+normal_approx(coef = coef(int_model)[4], boot_se = sd(results_int$treat_b))
+```
+
+2. Percentile Method C.I. 
+
+```{r}
+quantile(results_int$treat_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(quasi_int_model)[4,]
+```
+
+**Log(Age) - Log(Baseline Seizures) Interaction Term**
+
+```{r}
+#| fig-cap: "Sampling Distribution of respective interactive term regression coefficient" 
+#| label: fig-age-base-int
+#| fig-width: 8
+sampling_dist_plot(res_data = results_int, variable = 'log_age_log_base_int_b')
+```
+
+1. Normal Approximation Method
+
+```{r}
+normal_approx(coef = coef(int_model)[5], boot_se = sd(results_int$log_age_log_base_int_b))
+```
+
+2. Percentile Method C.I. 
+
+```{r}
+quantile(results_int$log_age_log_base_int_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(quasi_int_model)[5,]
+```
+
+**Treatment - Log(Age) Interaction Term**
+
+```{r}
+#| fig-cap: "Sampling Distribution of respective interactive term regression coefficient" 
+#| label: fig-treat-age-int
+#| fig-width: 8
+sampling_dist_plot(res_data = results_int, variable = 'log_age_treat_int_b')
+```
+
+1. Normal Approximation Method
+
+```{r}
+normal_approx(coef = coef(int_model)[6], boot_se = sd(results_int$log_age_treat_int_b))
+```
+
+2. Percentile Method C.I. 
+
+```{r}
+quantile(results_int$log_age_treat_int_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(quasi_int_model)[6,]
+```
+
+**Treatment - Log(Baseline Seizures) Interaction Term**
+
+```{r}
+#| fig-cap: "Sampling Distribution of respective interactive term regression coefficient" 
+#| label: fig-treat-base-int
+#| fig-width: 8
+sampling_dist_plot(res_data = results_int, variable = 'log_base_treat_b')
+```
+
+1. Normal Approximation Method
+
+```{r}
+normal_approx(coef = coef(int_model)[7], boot_se = sd(results_int$log_base_treat_b))
+```
+
+2. Percentile Method C.I. 
+
+```{r}
+quantile(results_int$log_base_treat_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(quasi_int_model)[7,]
+```
+
+**Three-variable Interaction Term**
+
+```{r}
+#| fig-cap: "Sampling Distribution of a three-variable interaction term regression coefficient" 
+#| label: fig-threesome-int
+#| fig-width: 8
+sampling_dist_plot(res_data = results_int, variable = 'log_age_log_base_treat_int_b')
+```
+
+1. Normal Approximation Method
+
+```{r}
+normal_approx(coef = coef(int_model)[8], boot_se = sd(results_int$log_age_log_base_treat_int_b))
+```
+
+2. Percentile Method C.I. 
+
+```{r}
+quantile(results_int$log_age_log_base_treat_int_b, p = c(0.025, 0.975))
+```
+
+3. Comparison with Quasipoisson
+
+```{r}
+confint(quasi_int_model)[8,]
 ```
 
 # Problem 2
