@@ -17,6 +17,7 @@ execute:
 ```{r}
 library(tidyverse)
 library(kableExtra)
+library(gridExtra)
 ```
 
 # Problem 1
@@ -45,30 +46,57 @@ seiz_total <-
 
 ### (1)
 
+First, we will fit the two model and display the code so that you may follow along: 
 
 ```{r}
+#| echo: true
 f1 <- glm(seiz ~ log(age)+log_base+treat, data = seiz_total, family = poisson())
 fq1 <- glm(seiz ~ log(age)+log_base+treat, data = seiz_total, family = quasipoisson())
-
-
-summary(f1)
-summary(fq1)
-
-var_coef_f1 <- diag(vcov(f1))
-var_coef_fq1 <- diag(vcov(fq1))
-
-var_coef_f1
-var_coef_fq1
-
-var_coef_fq1 / var_coef_f1
-
 ```
+
+Using the diagonal of a variance-covariance matrix we can obtain variances of each model coefficient. 
+
+Variances of fitted coefficients from the Poisson regression model are given below: 
+
+```{r}
+#| echo: true
+diag(vcov(f1))
+```
+
+Variances of fitted coefficients from the Quasipoisson regression model are given below: 
+
+```{r}
+#| echo: true
+diag(vcov(fq1))
+```
+
+Taking the ratio of the two coefficient vectors we obtain a constant value of the over-dispersion parameter
+
+```{r}
+#| echo: true
+diag(vcov(fq1)) / diag(vcov(f1))
+```
+
+Note that the summary output of the Quasipoisson regression model provides the same value: 
+
+```{r}
+summary(fq1)
+```
+
+
+
 
 ### (2)
 
 ```{r}
+N_iter <- 5000
+```
 
-N_iter <- 1000
+Using code below with `N_iter` iterations we will obtain bootstrapp sampling distributions of Poisson regression 
+model coefficients. 
+
+```{r}
+#| echo: true
 
 results <- 
   data.frame(
@@ -94,25 +122,135 @@ for(i in 1:N_iter){
 
 }
 
+```
+
+@tbl-coef-comp-1 shows comparison of standard errors for model term coefficients obtained using three 
+different ways. 
+
+```{r}
+#| label: tbl-coef-comp-1
+#| tbl-cap: "Comparion of fitted and boostrapped model parameters"
+#| 
+
+add_model_coef <- 
+  
+  results %>% 
+    summarize(
+      across(
+        .cols = c('log_age_b', 'log_base_b', 'treat_b'), 
+        .fns = list(mean, sd)
+    )) 
+
+mean_add <- add_model_coef[c(1,3,5)]
+var_names <- names(mean_add)
+names(mean_add) <- NULL
+
+sd_add <- add_model_coef[c(2,4,6)]
+names(sd_add) <- NULL
+
+add_model_coef_f <- 
+  data.frame(
+    names = var_names, 
+    add_mean = t(mean_add) , 
+    add_sd = t(sd_add)
+  )
+
+add_model_coef_f <- 
+  add_model_coef_f %>% 
+  
+  mutate(
+    pretty_names = c("Log(Age)", "Log(Baseline Seizures)", "Treatment")
+  ) %>% 
+  
+  select(-names) 
+
+add_model_coef_f$fitted_vals <- coef(f1)[-1]
+add_model_coef_f$fitted_se <- coefficients(summary(f1))[-1,2]
+
+
+add_model_coef_f$fitted_vals_q <- coef(fq1)[-1]
+add_model_coef_f$fitted_se_q <- coefficients(summary(fq1))[-1,2]
+
+add_model_coef_f <- 
+  add_model_coef_f %>% 
+  select(
+    pretty_names, 
+    
+    fitted_vals, fitted_se,
+    
+    fitted_vals_q, fitted_se_q, 
+    
+    add_mean, add_sd
+    
+  )
+
+add_model_coef_f %>% 
+  
+  kable(booktabs = T, 
+    #    caption = "Comparion of fitted and boostrapped model parameters", 
+        linesep = "\\addlinespace", 
+        align = c('l', rep('c', (length(add_model_coef_f)-1))), 
+        digits = 2, 
+        col.names = c("Model Terms",  
+                      "Beta", "SE", 
+                      "Beta", "SE", 
+                      "Avg. Beta", "SE"
+                      )) %>% 
+  kable_styling(latex_options = c("condenced", "striped", "hold_position"), 
+                full_width = F) %>% 
+  column_spec(2:length(add_model_coef_f), width = "1cm") %>%
+  column_spec(1, width = "4cm") %>% 
+  add_header_above(c(" " = 1,
+                     "Poisson \nFitted Values" = 2, 
+                     "Quasipoisson \nFitted Values" = 2, 
+                     "Boostrapp \nSimple Model" = 2
+                     ))
 
 ```
 
+Comments: 
+
+1. We can see full effect of Poisson regression deficiency, standard errors for beta's are much much smaller 
+for Possion beta's when compared to Quasipoisson. 
+
+2. Quasipoisson and Bootstrap standard errors are *approximately* equal. For some variables bootstrap standard 
+error is bigger, for some quasipoisson standard errors are higher. 
+
+3. Overall, Quasipoisson and Boostrap methods produce similar standard errors, so either method should be 
+appropriate for use in practice. 
+
+
+
 ### (3)
 
-Bias = average of bootsrap - fitted coefficient 
+Bias = average Beta's from `r `N_iter` bootstrap iterations - fitted coefficients from regression model. 
+
+Summarize bootstrap iterations data and present results: 
 
 ```{r}
+#| echo: true
 boot_beta <- 
   results %>% 
     summarise(across(.cols = c("intercept_b", "log_age_b", "log_base_b", "treat_b"), .fns = mean))
 
+boot_beta
+```
+
+True coefficients from the regression model: 
+
+```{r}
 coef(f1)
+```
 
-# bias
-
+Taking the difference produces bias for each model coefficient: 
+```{R}
+#| echo: true
 boot_beta - coef(f1)
 
 ```
+Numerically, bias estimates are very close to 0 for each model term, so we have no reason to believe that the 
+estimates are biased. 
+
 ### (4)
 
 ```{R}
@@ -131,7 +269,7 @@ sampling_dist_plot <-
           variable == 'log_age_log_base_treat_int_b' ~ "Three-way Interaction"
         )
     
-      ggplot(data = res_data, 
+      p1 <- ggplot(data = res_data, 
              aes_string(x = variable)) + 
         geom_histogram(
           aes(y =..density..),
@@ -151,18 +289,23 @@ sampling_dist_plot <-
       
       ylab("") + 
       xlab(
-        paste0("Sampling Distribtuion of ", pretty_name, " coefficient")
-        )
+        paste0("Sampling Distribtuion of\n ", pretty_name, " coefficient")
+        ) + 
+      theme(legend.position="bottom")
+      
+      p2 <-  ggplot(res_data, aes_string(sample = variable)) + stat_qq() + stat_qq_line() + theme_minimal() +
+        theme(legend.position = "bottom")
+      
+      grid.arrange(p1, p2, nrow = 1) 
+       
   }
 
 ```
 
-
+We will use function displayed below to obtain normal approximation confidence intervals: 
 
 ```{r}
-
-# normal approximation C.I. 
-
+#| echo: true
 normal_approx <- 
   function(coef, boot_se, rounding = 5){
     
@@ -178,13 +321,22 @@ normal_approx <-
 
 ```
 
+I will use one page per variable in this and future sections for organization purposes. 
+
+\newpage
 
 **Log (Age)**
+
+@fig-log-age shows bootstrap sampling distribution for log(age) predictor from the simple additive model. 
+We use mean and variance of bootstrap sampling distribution to fit and display a normal curve. 
+
+Visually, log(age) distribution looks approximately normal. 
 
 ```{r}
 #| fig-cap: "Sampling Distribution of Log(Age) regression coefficient" 
 #| label: fig-log-age
 #| fig-width: 8
+
 sampling_dist_plot(res_data = results, variable = 'log_age_b')
 ```
 
@@ -206,7 +358,27 @@ quantile(results$log_age_b, p = c(0.025, 0.975))
 confint(fq1)[2,]
 ```
 
+4. Comments: 
+
+* We can see that Quasipoisson produces the widest itnerval in the set of three options. However, 
+it is well within a range that we might want to consider as noise, without conducting more tests to verify 
+the difference. 
+
+* Normal approximation is slightly wider than the quantile interval method. We can see that the normal curve and 
+historgram both show slight evidence of heavy tails or values that are starting to be a little extreme. 
+Greater width of distribution increases variance, and therefore we have a higher standard error for the 
+normal approximation confidence interval. 
+
+\newpage
+
 **Log (Baseline Seizures)**
+
+
+@fig-log-seiz shows bootstrap sampling distribution for log(age) predictor from the simple additive model. 
+
+Visually, log(age) distribution does not look approximately normal. 
+In fact, it looks more bimodal. QQplot also shows evidence of deviation from normality for the sampling
+distribution. 
 
 ```{r}
 #| fig-cap: "Sampling Distribution of Log(Baseline Seizures) regression coefficient" 
@@ -232,6 +404,13 @@ quantile(results$log_base_b, p = c(0.025, 0.975))
 ```{r}
 confint(fq1)[3,]
 ```
+
+4. Comments: 
+
+* All three methods produce approximately similar confidence intervals. However, due to deviation from normality,
+we can no longer interpret these confidence intervals in a regular way. 
+
+\newpage 
 
 **Treatment**
 
@@ -260,6 +439,15 @@ quantile(results$treat_b, p = c(0.025, 0.975))
 confint(fq1)[4,]
 ```
 
+4. Comments: 
+
+* Normal approximation confidence interval is quite wider than the other two methods. We can see that both tails 
+are quite heavier than expected under the normal distribution. Therefore, variance of the estimate and standard 
+error appear more inflated. Quantiles are less sensitive to more extreme values, therefore, quantile 
+method aligns with the model estiamted confidence interval better.
+
+\newpage
+
 ### (5)
 
 ```{r}
@@ -269,9 +457,11 @@ quasi_int_model <- glm(seiz ~ log(age)*log_base*treat, data = seiz_total, family
 
 ```
 
+Repeat a bootstrap procedure with a model containing a total of eight predictors now. 
 
 ```{r}
-
+#| echo: true
+#| 
 results_int <- 
   data.frame(
     i = seq(1,N_iter, by = 1), 
@@ -309,6 +499,9 @@ for(i in 1:N_iter){
 ```
 
 **Comparison with simpler additive model** 
+
+@tbl-coef-comp displays fitted coefficients and standard errors for a more complicated model, as well as a simpler poisson 
+regression. 
 
 ```{R}
 #| label: tbl-coef-comp
@@ -435,6 +628,19 @@ coef_from_two_model %>%
 
 ```
 
+Comments: 
+
+* We obviously know that a Poisson regression model will severely underestimate variance. For some coefficients the difference 
+is absolutely enormous. 
+
+* This example showcases how bootstrap standard error estimates are consistently lower than the quasipoisson estimates. 
+Jared pointed out that underestimation of standard errors is a known flaw of bootstrap methods. 
+
+* It was surprising for me to see that even after `r N_iter` replications, we get a notable discrepancy between quasipoisson 
+regression coefficients and average Beta's from the replications. I am not sure if this suggests that the model estimates are 
+biased. Mathematically, we surely will see a notable amount of bias. 
+
+\newpage
 
 **Log (Age)**
 
@@ -463,6 +669,24 @@ quantile(results_int$log_age_b, p = c(0.025, 0.975))
 confint(quasi_int_model)[2,]
 ```
 
+4. Comments: 
+
+* I wouldn't particularly call this sampling distribution approximately normal. Lower tail is quite heavy, 
+so normal and quantile approximations of the confidence interval might not make sense anymore. Complicated models commonly 
+have such issues and deviations from assumptions. 
+
+* Normal approximation method is heavily affected by the variance inflation from lower tail outliers. 
+
+* Quantile method is affected by deviation from normality: observed quantiles of the data do not align with theoretical quantiles of a normal distribution
+
+5. Differences: 
+
+* The distribution has a heavy hail now, which we did not see on @fig-log-age. 
+
+* Confidence interval endpoints are now quite different as well. Skewness of the distribution affects estiamtes. 
+
+\newpage
+
 **Log (Baseline Seizures)**
 
 ```{r}
@@ -489,6 +713,17 @@ quantile(results_int$log_base_b, p = c(0.025, 0.975))
 ```{r}
 confint(quasi_int_model)[3,]
 ```
+
+4. Comments and Comparisons: 
+
+* More complicated model and interaction of factors changed the distribution of log-baseline seizures. The distribution is
+no longer bimodal. 
+
+* However, I would say there are still issues with the sampling distribution. Heavy tails cause the discrepancy between the 
+three methods we use to obtain confidence intervals. 
+
+
+\newpage 
 
 **Treatment**
 
@@ -517,6 +752,29 @@ quantile(results_int$treat_b, p = c(0.025, 0.975))
 confint(quasi_int_model)[4,]
 ```
 
+4. Comments: 
+
+* Treatment flag sampling distribution looks approximately normal, with a minor issue at the lower tail 
+
+* It seems to me that the range of normal approximation and percentile methods are very similar, however, the 
+bounds are quite different. I suspect that this goes back to the bias comment I made easrlier. Normal approximation uses 
+a true fitted value of a coefficient and bootstrap standard error to make an interval. Quantile method relies purely on the 
+estimated sampling distribution, which has a different average - center - which is a the average Beta from all replications. 
+The difference in what we consider the center of the interval causes differing bounds between the two methods 
+
+* Quasipoisson method produces a wider confidence interval, and it is wider equally in each direction. 
+
+5. Comparisons: 
+
+* Everything is different for treatment now. Fitted coefficient is quite large and far from zero
+
+* Confidence interval is also extremely wide when compared with he previous results from a simpler model 
+
+* It is hard to say what exactly is the cause of such a large discrepancy without examining how the model behavior 
+changes with addition of each new variable and interaction. 
+
+\newpage 
+
 **Log(Age) - Log(Baseline Seizures) Interaction Term**
 
 ```{r}
@@ -543,6 +801,15 @@ quantile(results_int$log_age_log_base_int_b, p = c(0.025, 0.975))
 ```{r}
 confint(quasi_int_model)[5,]
 ```
+
+4. Comments: 
+
+* Similar issue - heavy tails of sampling distribution. 
+
+* Despite the issue we have confidence interval endpoints that are quite similar. We saw that this is not always the case 
+form previous examinations, so we will treat this occurrence as a coincidence. 
+
+\newpage 
 
 **Treatment - Log(Age) Interaction Term**
 
@@ -571,6 +838,16 @@ quantile(results_int$log_age_treat_int_b, p = c(0.025, 0.975))
 confint(quasi_int_model)[6,]
 ```
 
+4. Comments: 
+
+* We can see that there is an issue at the upper tail, the tail is quite heavier than expected. 
+
+* This issue causes the discrepancy between quantile and normal approximation methods. 
+
+* Quasipoisson confidence interval is wider in each direction again. 
+
+\newpage 
+
 **Treatment - Log(Baseline Seizures) Interaction Term**
 
 ```{r}
@@ -597,6 +874,16 @@ quantile(results_int$log_base_treat_b, p = c(0.025, 0.975))
 ```{r}
 confint(quasi_int_model)[7,]
 ```
+
+4. Comments: 
+
+* We can see that there is an issue at the upper tail, the tail is heavier than expected. 
+
+* This issue causes the discrepancy between quantile and normal approximation methods. 
+
+* Quasipoisson confidence interval is wider in each direction again. 
+
+\newpage 
 
 **Three-variable Interaction Term**
 
@@ -625,4 +912,184 @@ quantile(results_int$log_age_log_base_treat_int_b, p = c(0.025, 0.975))
 confint(quasi_int_model)[8,]
 ```
 
+
+4. Comments: 
+
+* We can see that there is an issue at the lower tail, the tail is heavier than expected. 
+
+* Despite the issue we have confidence interval endpoints that are quite similar. We saw that this is not always the case 
+form previous examinations, so we will treat this occurrence as a coincidence. 
+
+* Quasipoisson confidence interval is wider in each direction again. 
+
+\newpage 
+
 # Problem 2
+
+```{r}
+fish <- read.table('http://jaredhuling.github.io/data/fish.txt', header=TRUE)
+```
+
+### (i)
+
+I am using code below to obtain difference curves for various values of $\beta_1$ ad $\beta_2$
+
+```{r}
+#| echo: true
+bh <- function(S, beta1, beta2){
+  
+  1/(beta1 + beta2/S)
+  
+}
+```
+
+@fig-bh shows combinations of different parameter values and the curves that they produce. On the original scale of $R$ and 
+$S$, none of these curves seem like a good fit to the data. 
+
+```{R}
+#| label: fig-bh
+#| fig-cap: "Various B-H curves"
+
+bh_data <- 
+  fish %>% 
+  
+  mutate(curve1 = bh(S = S, beta1 = .002, beta2 = .7),
+         curve2 = bh(S = S, beta1 = .002, beta2 = 1),
+         curve3 = bh(S = S, beta1 = .005, beta2 = 1))
+
+ggplot(data = fish, 
+       aes(x = R, y = S ) )+ 
+  geom_point() + 
+  geom_smooth(data = bh_data, aes(x = S, y = curve1, color = "B1 = 0.002, B2 = 0.7")) +
+  geom_smooth(data = bh_data, aes(x = S, y = curve2, color = "B1 = 0.002, B2 = 1.0")) + 
+  geom_smooth(data = bh_data, aes(x = S, y = curve3, color = "B1 = 0.005, B2 = 1.0")) + 
+  
+  theme_minimal() 
+
+```
+
+### (ii)
+
+Using code below we fit the mode. Summary is also provided. We will use `coef()` function later ro complete future tasks.
+
+```{r}
+#| echo: true
+bh_lm <- lm(I(1/R) ~ I(1/S), data = fish)
+
+summary(bh_lm)
+
+```
+
+### (iii)
+
+Using a formula for the stable population that Jared provided we can write `R` code to compute this value
+
+```{r}
+#| echo: true
+N = (1 - coef(bh_lm)[2])/coef(bh_lm)[1]
+
+N
+
+```
+
+It appears that `r floor(N)` or `r ceiling(N)` is the number of fish in each class required to maintain a stable population. 
+
+### (iv)
+
+```{r}
+set.seed(1)
+```
+
+All bootstrap work will be done with 1000 replications in the following sections. 
+
+Bootstrapped stable population estimate is provided using this function below: 
+
+```{r}
+#| echo: true
+N_hat <- function(df, est_iter) {
+
+  res <- 
+    data.frame(
+      i = seq(1,est_iter, 1), 
+      N_Stable = rep(NA, est_iter)
+    )
+  
+  for(i in 1:est_iter){
+    iter_bh_lm <- lm(I(1/R) ~ I(1/S), data = df[sample(rownames(df), replace = T), ])
+    
+    res$N_Stable[i] = (1 - coef(iter_bh_lm)[2])/coef(iter_bh_lm)[1]
+  }
+  
+  estimate = mean(res$N_Stable)
+  
+  return(estimate)
+}
+
+N_hat(df = fish, est_iter = 1000)
+
+```
+
+The answer matches exact calculation almost perfectly. 
+
+### (v)
+
+@fig-stab show the sampling distribution of the stable population N estimate. 
+
+```{r}
+#| fig-cap: "Sampling distribution of stable population N estiamte" 
+#| label: fig-stab
+N_hat_sampling_dist_plot <- function(df, est_iter){
+  
+  res <- 
+    data.frame(
+      i = seq(1,est_iter, 1), 
+      N_Stable = rep(NA, est_iter)
+    )
+  
+  for(i in 1:est_iter){
+    iter_bh_lm <- lm(I(1/R) ~ I(1/S), data = df[sample(rownames(df), replace = T), ])
+    
+    res$N_Stable[i] = (1 - coef(iter_bh_lm)[2])/coef(iter_bh_lm)[1]
+  }
+  
+  ggplot(data = res, 
+         aes(x = N_Stable)) + 
+    
+    geom_histogram(bins = 30, color = "black", fill = "grey") + 
+    theme_minimal() + 
+    ggtitle(paste0("Sampling distribution of stable N \n  based on ", est_iter, " bootstrapp iterations")) + 
+    
+    xlab("Stable popualtion number estiamte") + 
+    ylab("")
+}
+
+N_hat_sampling_dist_plot(df = fish, est_iter = 1000)
+
+```
+
+Using this distribution and its quantiles we can obtain a percentile bootstrap confidence intervals. 
+
+The result is given below after the code chunk with a function 
+
+```{r}
+#| echo: true
+N_hat_percentile_boot <- function(df, est_iter) {
+
+  res <- 
+    data.frame(
+      i = seq(1,est_iter, 1), 
+      N_Stable = rep(NA, est_iter)
+    )
+  
+  for(i in 1:est_iter){
+    iter_bh_lm <- lm(I(1/R) ~ I(1/S), data = df[sample(rownames(df), replace = T), ])
+    
+    res$N_Stable[i] = (1 - coef(iter_bh_lm)[2])/coef(iter_bh_lm)[1]
+  }
+  
+  return(quantile(res$N_Stable, c(0.025, 0.975)))
+}
+
+N_hat_percentile_boot(df = fish, est_iter = 1000)
+
+```
