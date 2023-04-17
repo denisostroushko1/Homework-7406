@@ -1,0 +1,111 @@
+---
+title: "Homework 4"
+author: "Denis Ostroushko"
+format: 
+  pdf:
+    toc: false
+    number-sections: false
+    colorlinks: true
+editor: source
+execute: 
+  eval: true
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+library(kableExtra)
+library(gridExtra)
+
+library(mi)
+library(mice)
+```
+
+# Problem 1
+
+```{r}
+
+data(nlsyV)
+nlsyV$momrace_w <- as.factor(ifelse(nlsyV$momrace == 3, "white", "nonwhite"))
+nlsyV$momed <- as.factor(nlsyV$momed)
+nlsyV <- nlsyV[, - c(7)]
+
+```
+
+### (a)
+
+**Chosing models** 
+
+```{r}
+#| eval: false 
+summary(nlsyV)
+
+# first, momage have no missing values 
+
+# ppvtr.36, income are continuous random variables 
+
+# b.marr, momrace_w  are  binary 
+
+# momed is ordinal 
+```
+
+**ppvtr.36 distribution** 
+
+use norm
+
+```{R}
+
+summary(nlsyV$ppvtr.36)
+
+ggplot(data = nlsyV, 
+       aes(x = ppvtr.36)) + geom_density()
+
+```
+
+**income**
+
+use norm, and log of income 
+
+```{R}
+
+summary(nlsyV$income)
+
+ggplot(data = nlsyV, 
+       aes(x = log(income+1))) + geom_density()
+
+```
+
+**Multiple imputatiton**
+
+```{r}
+
+imp_1 <- mice(nlsyV, 
+              method = c("norm", "logreg", "logreg", "pmm","pmm", "polr", "logreg"), 
+              maxit = 25, 
+              m = 50)
+
+imp_1
+```
+
+### (b)
+
+```{r}
+plot(imp_1, layout = c(4,3))
+```
+
+### (c)
+
+```{r}
+
+options(scipen = 999)
+
+fit_mi <- with(imp_1, lm(ppvtr.36 ~ first + b.marr + income + momage + momed + momrace_w))
+
+sum <- summary(pool(fit_mi))
+
+sum[,2:length(sum)] <- round(sum[,2:length(sum)], 2)
+
+sum
+```
