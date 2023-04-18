@@ -13,20 +13,29 @@ S <- 100
 n <- 200
 
 # Parameter and Standard Error Estimates 
+
 parm.est <- matrix(0, nrow = S, ncol = 5)
 se.est <- matrix(0, nrow = S, ncol = 5)
 colnames(parm.est) <- colnames(se.est) <- paste("Method", letters[1:5], sep = ".")
 
+## S <- controls the number of iterations we use to create a sampling distribution 
+## N <- sample size for the data: currently, we have n = 200. We should probably try 100, 200, ... , 1000 
+## INT <- intercept
+    ## currently: X1_obs <- rbinom(n, 1, expit(1 + 0.25*X2 + 0.25*X3 + 0.125*X4 + 0.125*X5))
+    ## thus, intercept is currently set to 1, try to use 0.5 to 2 with a .25 increment 
+
+
 for (q in 1:S) {
   X_123 <- rmvnorm(n, mean = rep(0, 3), 
-                   sigma = matrix(c(1, 0.6, 0.36, 0.6, 1, 0.6, 0.36, 0.6, 1), 
+                   sigma = matrix(c(1, 0.6, 0.36, 0.6, 1, 0.6, 0.36, 0.6, 1),  # this one is supposed to be a 3x3 matrix 
+                                                                              # to include all variances and covariances 
                                   nrow = 3, ncol = 3))
-  X1 <- X_123[, 1]
+  X1 <- X_123[, 1] # store individual variables 
   X2 <- X_123[, 2]
   X3 <- X_123[, 3]
-  X4 <- rbinom(n, 1, expit(0.5*X1 + 0.5*X2 - 0.5*X3))
+  X4 <- rbinom(n, 1, expit(0.5*X1 + 0.5*X2 - 0.5*X3)) 
   X5 <- rbinom(n, 1, expit(0.5*X1 - 0.5*X2 + 0.5*X3 - 0.5*X4))
-  Y <- 2 + X1 + X2 + X3 + 2*X4 + 2*X5 + rnorm(n, mean = 0, sd = 3)
+  Y <- 2 + X1 + X2 + X3 + 2*X4 + 2*X5 + rnorm(n, mean = 0, sd = 3) # true coefficients are here. They are supposed to be 1 and 2
   
   # Add in some missing data
   X1_obs <- rbinom(n, 1, expit(1 + 0.25*X2 + 0.25*X3 + 0.125*X4 + 0.125*X5))
@@ -38,6 +47,7 @@ for (q in 1:S) {
   # Method A
   method.A <- summary(lm( Y ~ X1 + X2 + X3 + X4 + X5, 
                           data = final_data))$coefficients
+  
   method.A.coef <- method.A[2, 1]
   method.A.se <- method.A[2, 2]
   
@@ -83,3 +93,7 @@ for (q in 1:S) {
   print(q)
 }
 
+# save estimates to help wtih rendering HW. Simulation takes a few minutes to run 
+
+write.csv(parm.est, "./HW5/problem 2 parameter estimates.csv")
+write.csv(se.est, "./HW5/problem 2 errors estimates.csv")

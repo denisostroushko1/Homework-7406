@@ -38,6 +38,10 @@ nlsyV <- nlsyV[, - c(7)]
 
 **Chosing models** 
 
+Before diving into the multiple imputation I decided to study the distribution of observed variables. While we covered that 
+the distribution of observed vales does not give accurate information about the true distribution of a random variable. However, 
+knowing the shape of observed distribution might be able to suggest a proper model for the imputaton. 
+
 ```{r}
 #| eval: false 
 summary(nlsyV)
@@ -53,7 +57,8 @@ summary(nlsyV)
 
 **ppvtr.36 distribution** 
 
-use norm
+We begin by studying the shape of a response variable in this study. We can use a Bayesian Normal Linear model for the inputaion 
+task here. 
 
 ```{R}
 
@@ -66,39 +71,87 @@ ggplot(data = nlsyV,
 
 **income**
 
-use norm, and log of income 
+The distribution of income is heavily skewed. Perhaps, it would make more sense to use a log-transformation of the variable to 
+achieve more accurate predictions, however, this will affect the estimates we eventually produce. For the purpose of being consistent with assignment expectations, use income on the original scale. Again, we will use a Bayesian model. 
 
 ```{R}
 
 summary(nlsyV$income)
 
 ggplot(data = nlsyV, 
-       aes(x = log(income+1))) + geom_density()
+       aes(x = income)) + geom_density()
 
 ```
 
-**Multiple imputatiton**
+<!--
+Exp(log(income )) is handled with passive impuattion: talked in the book 
+
+MICE can specify the order of the imputatuon: impute variables with missing data first, and go down the list 
+--> 
+
+Variables `b.marr` and `momed` will be imputed using a logistic regression and proportional odds models respectively. 
+
+**Multiple imputation**
+
+Code below provides my approach to multiple imputation problem. I use 50 data sets for pooling of results and require 25 iterations 
+before a given data set results are considered converged. 
 
 ```{r}
+#| echo: true
+#| icnlude: false 
+
+# list of imputation models 
+# https://www.rdocumentation.org/packages/mice/versions/3.15.0/topics/mice
 
 imp_1 <- mice(nlsyV, 
               method = c("norm", "logreg", "logreg", "pmm","pmm", "polr", "logreg"), 
               maxit = 25, 
-              m = 50)
+              m = 50, 
+              printFlag = F)
 
-imp_1
 ```
 
 ### (b)
+
+<!--
+In the process of evaluatuon we can look at residuals for each M_i and look at the values 
+--> 
+
+We begin evaluation of our imputations by looking over at the mean and standard deviation of each imputed variable over the 
+course of all 50 imputations. 
+
 
 ```{r}
 plot(imp_1, layout = c(4,3))
 ```
 
+We are looking for evidence or absence of these things: 
+
+1. Trends in mean or standard deviation. It is clear here that there is no concrete upward or downward trend in the summary 
+statistics. This is an indication that a set of imputations is appropriate
+
+2. Constancy of variance in summary statistics. While there are some spikes, or outliers in imputations, especially in the 
+income variable, overall, I see no obvious problems with the imputations. 
+
+3. The two point above make me feel convinced that the imputation process converged. 
+
+Additionally we will look at the diagnostic of distribution of imputed variables for each of 50 iterations. 
+
+```{R}
+bwplot(imp_1)
+```
+
+Again, there are clear outliers with the income variable, but the we saw there this distribution is prone to very extreme values, 
+so we are expecting this behavior. Overall, there is no reason to believe that the imputation process has some obvious flaws. 
+
+We can use these imputations for the inference on the data. 
+
 ### (c)
 
-```{r}
+Code below provides pooled results for the regression model: 
 
+```{r}
+#| echo: true
 options(scipen = 999)
 
 fit_mi <- with(imp_1, lm(ppvtr.36 ~ first + b.marr + income + momage + momed + momrace_w))
@@ -109,3 +162,286 @@ sum[,2:length(sum)] <- round(sum[,2:length(sum)], 2)
 
 sum
 ```
+
+`first` is an indicator that a child is a first born. Estimated effect is 4.08, meaning that first born children on average score 
+4.08 points higher on the Peabody Picture Vocabulary Test, when compared with second and later born children, after adjusting for 
+other variables. 
+
+P-value is less than 0.05, indicating that the effect is statistically significant. 
+
+Confidence interval for the effect is (`r round( 4.08 - qt(.975, df = 176.96) * 2.02,2)`, `r round( 4.08 + qt(.975, df = 176.96) * 2.02,2)`). We used a 97.5th percentile of a T-distribution with 176.96 degrees of freedom to construct this confidence interval. 
+
+# Problem 2
+
+```{R}
+# results of simulation provided in code for homework 5 
+estiamtes <- read_csv('problem 2 parameter estimates.csv')[,-1]
+errors <- read_csv('problem 2 errors estimates.csv')[,-1]
+```
+
+In the simulation code provided, it appears that the true relationship between $Y$ and predctors $X_i$ foir $i$ = 1,2,3,4,5
+is given by this equation: 
+
+$$\large Y = 2 + X_1 + X_2 + X_3 + 2 * X_4 + 2 * X_5 + \epsilon$$
+where $\epsilon$ is a random error, normally distributed with mean 0 and variance $\sigma^2$. 
+
+### (a)
+
+Based on the description of the model above, we will use $\beta_1 = 1$ as the true value, and calculate bias using this value. 
+
+To calculate average bias for each method by first calculating bias for each of 100 iterations and then averaging over the difference. I am including code below and some values of estimates and biases before making final conclusions. 
+
+```{r}
+#| echo: true 
+
+estiamtes %>%  
+  mutate_all(~. - 1) %>% 
+  summarise(across(everything(), mean)) %>% 
+  t() %>% 
+  round(.,4) -> r
+
+colnames(r) <- "Average Bias"
+  
+r
+
+```
+
+It appears that method D, a Single imputation with error, has the lowest bias. Although, I would stay that methods A, D, E have the 
+lowest bias. 
+
+We covered that for complete case analysis the bias is close to zero if data missingness is independent of Y or other data. However, this is not the case here, and what we observed is due to chance. 
+
+Single and Multiple imputation with error are both fairly unbiased. 
+
+Imputing predicted value is a biased estimate because even if the model specification is correct, we do not include any error 
+structure into the data, so we produce estimates that are highly biased. 
+
+### (b)
+
+Before looking at the standard error of estimates, we can visually examine the distributions. 
+
+```{r}
+estiamtes %>% 
+  pivot_longer(
+    cols = colnames(estiamtes), 
+    names_to = "impute_method", 
+    values_to = "val"
+  ) %>%
+  
+  ggplot(
+    aes(x = val, color = impute_method)
+  ) + geom_density(size = 1, alpha = .5) + 
+  theme_minimal() + 
+  labs(legend.title = "Imputation Method")
+
+```
+
+I would say that all these look approximately normal. All distributions will have *similar* standard errors, however, method C, 
+will probably have the smallest variance, even though we know method C is a flawed method. 
+
+```{r}
+#| echio: true 
+
+estiamtes %>% 
+  summarise(across(everything(), sd)) %>% 
+  t() %>% 
+  round(.,4)
+
+colnames(r) <- "Standard Deviation of Betas"
+
+r
+
+```
+
+It appears that method C does have the smallest variance in the sampling distribution of method C. However, among *closely unbiased* estimates, method E, where we impute multiple times, has the smallest standard error. This is quite reassuring because 
+we know that multiple imputation is the best way to handle missing data. 
+
+### (c)
+
+
+Before looking at the standard error of estimates, we can visually examine the distributions. 
+
+```{r}
+errors %>% 
+  pivot_longer(
+    cols = colnames(estiamtes), 
+    names_to = "impute_method", 
+    values_to = "val"
+  ) %>%
+  
+  ggplot(
+    aes(x = val, color = impute_method)
+  ) + geom_density(size = 1, alpha = .5) + 
+  theme_minimal() + 
+  labs(legend.title = "Imputation Method")
+
+```
+
+<!-- clsoe to value in part b???--> 
+
+```{r}
+
+errors %>% 
+  summarise(across(everything(), mean)) %>% 
+  t() %>% 
+  round(.,4) -> r 
+
+colnames(r) <- "Average Standard Error"
+
+r
+
+```
+
+Results obtained here are similar to those in part (b). We would like to see that the average SE and the SE of obtained Betas from multiple iterations 
+agree, i.e. the two values are pretty close to each other. Otherwise, if we see a larger discrepancy, it would indicate that something is not right 
+with the sampling distribution. 
+
+All methods except for D have approximately matching values. A single imputation with error probably have these mismatching results due to a single error. When we draw just one error, sometimes the value of such error can be too extreme, which then creates an extreme values that skew regression estimates. 
+
+Multiple imputation and many draws masks the effect of a single outlier. 
+
+### (d)
+
+Average squared errors are given below: 
+
+```{r}
+#| echo: true
+#| 
+estiamtes %>% 
+  mutate_all(~(.-1)^2) %>% 
+  summarise(across(everything(), mean))  %>% 
+  t() %>% 
+  round(.,4) -> r
+
+colnames(r) <- "Average Squared Error"
+  
+r
+
+```
+
+Again, among the methods that produce unbiased estimates, method E has the smallest standard error for the regression coefficient. 
+
+### (e)
+
+My overall conclusion is that we should always use multiple imputation process with some error structure. While is produces results that are similar to 
+other methods, it seems intuitive to me that using more data and then averaging over results with some randomness should produce more 
+reliable and robust results, at the cost of computing power. 
+
+Method with a simple prediction imputation was the most problematic. Average bias of the estimate was quite high, which is due to the fact that we 
+did not have any error structure embedded in the model. 
+
+Complete case analysis showing the same performance as the multiple and single imputation methods is quite strange to me, I think this is simply a 
+coincidence, I did not see a reason as to why this would be the case in Jared's code. 
+
+In conclusion, we saw that: 
+
+1. Using predicted values for imputation produces biased regression estimates, which affects the validity of inference
+
+2. Using single imputation with error is not optimal because of the effect of a single outlier drawn can affect the results 
+
+3. Imputing mean value produces artificially low standard error for the estimated beta
+
+### (f)
+
+For the extra credit problem, I modified Jared's code to add more looping into the simulation code. I considered 
+Sample size of 100, 200, ... , 500, as well as modifying the intercept for probability of missingness indicator. I allowed the 
+intercept to range from 0.25 to 2, in 0.25 increments. 
+
+```{r}
+
+estimates_extra <- 
+  read_csv("problem 2 parameter estimates extra credit.csv")[,-1]
+```
+
+**Sample Size Effect**
+
+First, I plot Beta estimates against the sample size, and color these Beta's by their respective imputation method. While it appears that the 
+variance of sampling distributions decreases as N increases, no method of imputation seems to be affected by the sample size in terms of the average 
+estimated Beta. 
+
+We can see that method C, which had large bias, retains Beta that is consistently lower than the true value over all considered sample sizes N. 
+
+```{r}
+estimates_extra %>% 
+  pivot_longer(
+    cols = colnames(estimates_extra)[1:5], 
+    values_to = "estiamtes", 
+    names_to = "impute_method"
+  ) %>% 
+
+  ggplot(aes(x = N, y = estiamtes, color = impute_method)) + 
+  geom_point(alpha = 0.25) + 
+  stat_smooth(se = F, method = "loess")
+```
+
+**Missingness Amount Effect**
+
+Next we consider the plot of intercept against estimated Betas, colored by the respective imputation method again. 
+
+To help interpret these results, here are the two plots that show how increase in the intercept relates to the % of $X_1$ and $X_4$ are missing. 
+
+```{r}
+#| fig-width: 12
+#| 
+estimates_extra %>% 
+  pivot_longer(
+    cols = colnames(estimates_extra)[1:5], 
+    values_to = "estiamtes", 
+    names_to = "impute_method"
+  ) %>% 
+
+  ggplot(aes(x = INT, y = X1_p_missing, color = impute_method)) + 
+  geom_point(alpha = 0.25) + 
+  stat_smooth(se = F, method = "loess") + 
+  ggtitle("Distirbituion of % of missing X1 \n and the intercept \n used to create missingness") + 
+  theme(legend.position = "none", 
+        legend.text = element_text(angle = 45)) + 
+  guides(color = guide_legend(title = " ")) -> x1
+
+estimates_extra %>% 
+  pivot_longer(
+    cols = colnames(estimates_extra)[1:5], 
+    values_to = "estiamtes", 
+    names_to = "impute_method"
+  ) %>% 
+
+  ggplot(aes(x = INT, y = X4_p_missing, color = impute_method)) + 
+  geom_point(alpha = 0.25) + 
+  stat_smooth(se = F, method = "loess")  + 
+  ggtitle("Distirbituion of % of missing X4 \n and the intercept \n used to create missingness") + 
+  theme(legend.position = "none", 
+        legend.text = element_text(angle = 45)) + 
+  guides(color = guide_legend(title = " ")) -> x4
+
+grid.arrange(x1, x4, nrow = 1)
+
+```
+
+Clearly, as the intercept increases, we reduce the % of missing values for the two covariates that we impute
+
+Now, we can look at the plot of intercepts considered and estimated betas. 
+
+```{r}
+estimates_extra %>% 
+  pivot_longer(
+    cols = colnames(estimates_extra)[1:5], 
+    values_to = "estiamtes", 
+    names_to = "impute_method"
+  ) %>% 
+
+  ggplot(aes(x = INT, y = estiamtes, color = impute_method)) + 
+  geom_point(alpha = 0.25) + 
+  stat_smooth(se = F, method = "loess")
+
+```
+
+It appears that the methods most affected by the missing values is method C, which has been the most problematic so far. As the proportion of missing 
+values in X1 and X4 decreases, average bias of beta decreases as well. Method B seems to have similar behaviors, although not as strong. 
+
+Again, complete case analysis exhibits similar behavior to single and multiple imputation methods, which I did not expect.
+
+It is, again, reassuring to see that imputation methods with error structures have very robust behavior regardless of variation in sample size and 
+missingness levels. 
+
+
+
