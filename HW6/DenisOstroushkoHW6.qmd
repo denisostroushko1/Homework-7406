@@ -1,0 +1,508 @@
+---
+title: "Homework 6"
+author: "Denis Ostroushko"
+format: 
+  pdf:
+    toc: false
+    number-sections: false
+    colorlinks: true
+editor: source
+execute: 
+  eval: true
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+library(kableExtra)
+library(gridExtra)
+library(glmnet)
+library(pROC)
+library(rms)
+library(predtools)
+library(gridExtra)
+```
+
+```{R}
+fpath <- "https://jaredhuling.org/data/pubh7406/heart_failure_dataset.csv"
+heartf <- read.csv(fpath)
+```
+
+# Model Development 
+
+For the purpose of this exercise, we will fit a LASSO regularized regression model and evaluate its predictive power. 
+
+For computational simplicity, I will consider a model with no interactions. 
+
+It is always good to know the true positive rate and 'rarity' of events in the data, to have a good idea about the model building process and metrics that we need to use to properly assess predictive power of the candidate model. 
+
+```{r}
+summary(as.factor(heartf$DEATH_EVENT))
+```
+
+The events are not quite rare, but also the outcomes are more skewed towards `no death event` outcomes. 
+
+```{R}
+
+X <- as.matrix(heartf %>% select(-DEATH_EVENT))
+Y <- as.matrix(heartf %>% select(DEATH_EVENT))
+
+lasso_fit <- glmnet(x = X, y = Y, family = "binomial")
+```
+
+@fig-variables-lasso shows how which variables are included in the model as we relax the penalty and how the coefficient change. 
+We expect to have a final model that has a few predictors with large coefficients and some coefficients that are closer to zero. 
+
+```{r}
+#| fig-cap: "Relationship between Parameter Lambda and the number of variables included in the model" 
+#| label: fig-variables-lasso
+
+plot(lasso_fit, xvar = "lambda", label = T)
+```
+
+Additionally, using CV we can pick a parameter $\lambda$ that will allow us to fit the model that *should* maximize out of sample 
+AUC. 
+
+@fig-cv shows the results of CV. As we can see, the value of $\lambda$ that maximizes AUC is very similar to other considered 
+values. These results suggest that if we pick the lowest value of lambda, and create a more complex model that contains more variables, we still should achieve the same out of sample AUC. We will proceed with the least complicated model, that maximizes 
+OOS AUC. 
+
+```{R}
+#| label: fig-cv
+#| fig-cap: "Cross validation of lambda results" 
+#| 
+set.seed(1652)
+
+cv_lasso <- cv.glmnet(x= X, y = Y, nfolds = 10, type.measure = "auc", family = "binomial")
+
+mess <- paste0(
+  "Log-lambda value to minimize CV AUC: ",
+  round(log(cv_lasso$lambda.min), 2))
+
+mess2 <- paste0( 
+  "Log-lambda value within 1 S.E. of minimizing value: ", 
+  round(log(cv_lasso$lambda.1se),2)
+)
+print(mess)
+print(mess2)
+plot(cv_lasso)
+
+```
+
+Our model will incorporate these variables, their coefficients are also listed below: 
+
+```{r}
+coefs <- predict(cv_lasso, type = "coef", s = "lambda.min")
+
+round(as.matrix(coefs)[as.matrix(coefs) != 0, ], 4)
+```
+
+\newpage
+
+# Exercises
+
+### (1)
+
+@fig-roc-ins shows In Sample ROC curve. This is a very strongly favorable results, however, we know that In Sample AUC value is 
+always too optimistic. I colored the curve by the cutoff value. We decrease the value of $\pi_0$ cutoff as we go along the 
+x-axis from left to right. 
+
+```{r}
+#| fig-cap:  "In sample AUC value and ROC curve" 
+#| label: fig-roc-ins
+cv_lasso <- cv.glmnet(x= X, y = Y, nfolds = 10, type.measure = "auc", family = "binomial")
+predictions <- predict(cv_lasso, newx = X, type = "response", s = "lambda.min")
+
+ins_roc <- 
+  roc(
+    response = heartf$DEATH_EVENT, 
+    predictor = predictions
+  )
+
+roc_df <- data.frame(
+  fpr = ins_roc$specificities,
+  tpr = ins_roc$sensitivities,
+  cutoff = ins_roc$thresholds
+)
+
+my_colors <- colorRampPalette(c("blue", "green", "yellow", "orange", "red"))(5)
+# Create plot
+ggplot(data = roc_df, aes(x = (1-fpr), y = tpr, color = cutoff)) +
+  geom_path(size = 1) +
+  scale_color_gradientn(colors = my_colors) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(title = paste0("In sample ROC Curve. AUC: ", round(ins_roc$auc, 2)), 
+       x = "False Positive Rate", y = "True Positive Rate", color = "Cutoff") + 
+  theme_minimal() + 
+  scale_x_continuous(labels = seq(from = 1, to = 0, by = -.25)) + 
+  theme(legend.position = "botton") -> save_ins_roc
+
+save_ins_roc
+  
+```
+
+### (2)
+
+LOOCV does not work for the classification problem because it does not provide adequate information to us. ROC curve summarizes a
+set of TPR and FPR values. These are proportions, bounded by zero and one. If we use just one observation, then we always will have 
+a value of TPR that is equal to one, and FPR equal to zero, and vice versa. Therefore, we simply would not obtain an ROC curve. 
+
+Now we can perform a 10-fold cross validation. This means that at each iterations, approximately, `r round(.9*nrow(heartf))` 
+observations will be used to fit the model, and `r round(.1*nrow(heartf))` observations will be used to obtain out-of-sample (OOS) 
+AUC value for a set of predictions. 
+
+```{r}
+
+collect_auc_cv_results_one_model <- 
+  function(
+    K, 
+    DATA
+  ){
+    fold_ids <- sample(rep(1:K, length=nrow(DATA)))
+    auc_folds <- matrix(NA, nrow = K, ncol = 1)
+    colnames(auc_folds) <- c("AUC")
+    
+    for (i in 1:K){
+        # save temporary testing dataset for the current fold:
+        test <- DATA[fold_ids == i,]
+        test_X = as.matrix(test %>% select(-DEATH_EVENT))
+        Y = test$DEATH_EVENT
+        
+        # save temporary training dataset for the current fold:
+        train <- DATA[fold_ids != i,]
+        train_X = as.matrix(train %>% select(-DEATH_EVENT))
+        train_Y = as.matrix(train %>% select(DEATH_EVENT))
+        
+        ## fit first model on training data
+        
+            fit1_kcv <- cv.glmnet(x= train_X, y = train_Y, nfolds = 10, type.measure = "auc", family = "binomial")
+            pi_hat = predict(fit1_kcv, newx = test_X, type = "response", s = "lambda.min")
+        
+        ## predict and evaluate AU(ROC)C on test fold
+        pr <- roc(Y, pi_hat)
+        ## save auc from first model
+        auc_folds[i,1] <- pr$auc
+        
+    }
+    return(auc_folds)
+  }
+
+set.seed(16)
+
+res1 <- collect_auc_cv_results_one_model(K = 10, DATA = heartf)
+
+```
+
+@fig-oos-auc shows the distribution of OOS AUC values for the 10-fold validation. As we can see, there is pretty big variance in the
+AUC values. 
+
+```{R}
+#| fig-cap: "Out-Of-Sample AUC values for the 10-fold validation"
+#| label: fig-oos-auc
+boxplot(res1)
+summary(res1)
+```
+
+```{r}
+#| eval: false
+fold_ids <- sample(rep(1:10, length=nrow(heartf)))
+
+typical_val <- heartf[fold_ids == 10, ]
+nrow(typical_val)
+
+summary(as.factor(typical_val$DEATH_EVENT))
+```
+
+### (3)
+
+First, we will evaluate the impact of varying K in K-fold cross validation. The values of K I considered are `2, 3, 5, 10, 15`. 
+So, as K gets bigger, the training set gets larger and validation sample gets smaller. 
+
+```{r}
+
+compares_Ks <- 
+  function(
+    K_list, 
+    DATA){
+    
+    results <- matrix(NA, nrow = length(K_list), ncol = 6)
+    
+    for(i in 1:length(K_list)){
+    
+      iter_res <- collect_auc_cv_results_one_model(K = K_list[i], DATA = DATA)
+      
+      results[i, 1] <- i
+      results[i, 2] <- mean(iter_res)
+      results[i, 3] <- median(iter_res)
+      results[i, 4] <- sd(iter_res)
+      results[i, 5] <- min(iter_res)
+      results[i, 6] <- max(iter_res)
+      
+    }
+    
+    colnames(results) = c("i", "mean", "median", "sd", "min", "max")
+    return(results)
+  }
+
+set.seed(56789)
+res <- compares_Ks(K_list = c(2, 3, 5, 10, 15), 
+                   DATA = heartf)
+
+res_df <- data.frame(res)
+res_df$K = c(2, 3, 5, 10, 15) 
+```
+
+For each value of K I recorded summary of OOS AUC. First, we plot the average OOS AUC for each value of K. @fig-oos-auc-vary-k
+shows the results. It seems that the average value fluctuates randomly, but there is no trend. Perhaps, this is just 
+sampling variation. 
+
+```{r}
+#| label: fig-oos-auc-vary-k
+#| fig-cap: "Relationship between Out of Sample AUC and K in K-fold validation" 
+#| 
+ggplot(data = res_df, 
+       aes(x = K, y = mean)) + geom_point() + 
+  geom_line() + 
+  theme_minimal()
+```
+
+
+We can also can investigate how the increase in K affect variance of AUC scores. @fig-oos-auc-sd-vary-k clearly shows that 
+as K increases, so is the variance in the OOS AUC scores. This is quite interesting, I did not expect this to happen. 
+Perhaps, higher K and corresponding lower validation data set size can produce cases where the event is rare produce values of 
+AUC that are closer to 1, or 0.5, which increase variance. 
+
+```{R}
+#| label: fig-oos-auc-sd-vary-k
+#| fig-cap: "Relationship between variation of Out of Sample AUC and K in K-fold validation"
+
+ggplot(data = res_df, 
+       aes(x = K, y = sd)) + geom_point() + 
+  geom_line() + 
+  theme_minimal()
+
+```
+
+Impact of Seed on 10 Fold cross validation 
+
+```{r}
+
+compares_seeeds <- 
+  function(
+    seeds_list, 
+    DATA){
+    
+    results <- matrix(NA, nrow = length(seeds_list), ncol = 6)
+    
+    for(i in 1:length(seeds_list)){
+    
+      set.seed(seeds_list[i])
+      
+      iter_res <- collect_auc_cv_results_one_model(K = 10, DATA = DATA)
+      
+      results[i, 1] <- i
+      results[i, 2] <- mean(iter_res)
+      results[i, 3] <- median(iter_res)
+      results[i, 4] <- sd(iter_res)
+      results[i, 5] <- min(iter_res)
+      results[i, 6] <- max(iter_res)
+      
+    }
+    
+    colnames(results) = c("i", "mean", "median", "sd", "min", "max")
+    return(results)
+  }
+
+seed_res <- 
+  compares_seeeds(
+    seeds_list = c(12386,15464,164864,46851,486843, 
+                    48964, 1640, 15655, 48616, 8724, 
+                   72342,8423,29304,23847,1934), 
+    DATA = heartf
+  )
+
+seed_res_df <- data.frame(seed_res)
+```
+
+@fig-seed-mean-auc and @fig-seed-var-auc show how mean AUC and variance of AUC scores change when we set a new seed for 
+10-fold cross validation. There is no strong trend, and the values seem to be fluctuating randomly in a bounded interval. 
+
+```{R}
+#| label: fig-seed-mean-auc
+#| fig-cap: "Effect of seed change on mean OOS AUC" 
+ggplot(data = seed_res_df, 
+       aes(x = i, y = mean)) + geom_point() + 
+  geom_line() + 
+  theme_minimal()
+```
+
+```{R}
+#| label: fig-seed-var-auc
+#| fig-cap: "Effect of seed change on variance of OOS AUC" 
+ggplot(data = seed_res_df, 
+       aes(x = i, y = sd)) + geom_point() + 
+  geom_line() + 
+  theme_minimal()
+
+
+```
+
+
+### (4)
+
+@fig-val-roc shows that the AUC score for the validation data set is lower that what we observed for the training data. 
+We expect this kind of behavior, as we know that the model usually over fits to the training data. 
+
+```{r}
+#| label: fig-val-roc
+#| fig-cap: "ROC Curve of the validation data" 
+#| 
+fpath_val <- "https://jaredhuling.org/data/pubh7406/heart_failure_dataset_new_sample.csv"
+heartf_val <- read.csv(fpath_val)
+
+newX <- as.matrix(heartf_val %>% select(-DEATH_EVENT))
+
+
+X <- as.matrix(heartf %>% select(-DEATH_EVENT))
+Y <- as.matrix(heartf %>% select(DEATH_EVENT))
+cv_lasso <- cv.glmnet(x= X, y = Y, nfolds = 10, type.measure = "auc", family = "binomial")
+
+predictions <- predict(cv_lasso, newx = newX, type = "response", s = "lambda.min")
+
+ins_roc <- 
+  roc(
+    response = heartf_val$DEATH_EVENT, 
+    predictor = predictions
+  )
+
+roc_df <- data.frame(
+  fpr = ins_roc$specificities,
+  tpr = ins_roc$sensitivities,
+  cutoff = ins_roc$thresholds
+)
+
+my_colors <- colorRampPalette(c("blue", "green", "yellow", "orange", "red"))(5)
+# Create plot
+ggplot(data = roc_df, aes(x = (1-fpr), y = tpr, color = cutoff)) +
+  geom_path(size = 1) +
+  scale_color_gradientn(colors = my_colors) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  scale_x_continuous(labels = seq(from = 1, to = 0, by = -.25)) + 
+  labs(title = paste0("In sample ROC Curve. AUC: ", round(ins_roc$auc, 2)), 
+       x = "False Positive Rate", y = "True Positive Rate", color = "Cutoff") + 
+  theme_minimal() -> save_oos_roc
+
+save_oos_roc
+```
+
+We can also compare the two ROC curves side by side to identify where the main differences occur. 
+@fig-ins_oos_roc_sie_comp shows the two curves. If appears that the main deference occurs when we increase the decrease the 
+cutoff. 
+
+Using training data, this decreases in cutoff allowed us to correctly capture more and more true positives. This may suggests 
+that predicted probabilities for the group of positives are towards lower values of the 0-1 range. 
+
+This is not the case for the validation data sample, as with the decrease in the cutoff $\pi_0$ we see that the curve 
+does not go straight up, and we start to observe the effects of a trade off right away. 
+
+AUC for the validation data is lower than the average expected under the 10-fold and other K-fold cross-validation methods, 
+but is still within range of values under sampling variability. In other words, when we varied seed and K, we saw that 
+the average AUC may drop to values as low as 0.75, which is the case with the validation data here. Performance is on 
+the lower end of expected accuracy, given data variability. 
+
+```{r}
+#| label: fig-ins_oos_roc_sie_comp
+#| fig-cap: "Side by side comparison of In Sample and Out of Sample ROC curves"
+#| fig-height: 6
+#| fig-width: 10
+grid.arrange(save_ins_roc + 
+               theme(legend.position = "bottom"), 
+             save_oos_roc + 
+               theme(legend.position = "bottom"), 
+              
+              nrow = 1)
+
+```
+
+### (5)
+
+Using a LASSO model with two predictors produces a fair predictive performance, but as @fig-calib-plot suggests, the model 
+is extremely poorly calibrated. 
+
+For those who are truly at lower risk of a death event, the model tends to predict risks that are lower than those, so the model  understates the actual risk of a death event for people with low chances of a death event. 
+
+It goes the opposite way for those at the higher end of the risk spectrum, where the model drastically overestimates the 
+risk of mortality. 
+
+Given that we also can missclassify patients, using this model we may scare patients and give them news that are far worse
+than what the reality would be. 
+
+```{r}
+#| label: fig-calib-plot
+#| fig-cap: "Two-predictor model calibration plot" 
+#| fig-width: 10
+#| fig-height: 6
+
+
+predictions <- predict(cv_lasso, newx = newX, type = "response", s = "lambda.min")
+val.prob(predictions, heartf_val$DEATH_EVENT)
+
+```
+
+\newpage 
+
+As an experiment, I relaxed the shrinkage penalty and included more variables by making the penalty parameter smaller. 
+Using $\lambda$ = `exp(-4)` = `r round(exp(-4),2)`, we can see on @fig-new-roc that the AUC and shape of the curve remain 
+the same. Therefore, we have reason to believe that overall the ordering of probabilities remain approximately the same. 
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+#| label: fig-new-roc
+#| fig-cap: "New Model ROC on the validation data " 
+
+
+predictions <- predict(cv_lasso, newx = newX, type = "response", s = exp(-3.5))
+
+ins_roc <- 
+  roc(
+    response = heartf_val$DEATH_EVENT, 
+    predictor = predictions
+  )
+
+roc_df <- data.frame(
+  fpr = ins_roc$specificities,
+  tpr = ins_roc$sensitivities,
+  cutoff = ins_roc$thresholds
+)
+
+my_colors <- colorRampPalette(c("blue", "green", "yellow", "orange", "red"))(5)
+# Create plot
+ggplot(data = roc_df, aes(x = (1-fpr), y = tpr, color = cutoff)) +
+  geom_path(size = 1) +
+  scale_color_gradientn(colors = my_colors) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  scale_x_continuous(labels = seq(from = 1, to = 0, by = -.25)) + 
+  labs(title = paste0("In sample ROC Curve. AUC: ", round(ins_roc$auc, 2)), 
+       x = "False Positive Rate", y = "True Positive Rate", color = "Cutoff") + 
+  theme_minimal() -> save_oos_roc
+
+save_oos_roc
+```
+
+A new calibration plot on @fig-new-calib suggests that inclusion of more variables fixes calibration issues. 
+
+```{r}
+#| label: fig-new-calib
+#| fig-cap: "New calibration plot on the validation data" 
+#| fig-width: 10
+#| fig-height: 6
+val.prob(predictions, heartf_val$DEATH_EVENT)
+
+```
+
+
+
+

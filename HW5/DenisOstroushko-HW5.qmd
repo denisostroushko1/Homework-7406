@@ -1,5 +1,5 @@
 ---
-title: "Homework 4"
+title: "Homework 5"
 author: "Denis Ostroushko"
 format: 
   pdf:
@@ -36,11 +36,11 @@ nlsyV <- nlsyV[, - c(7)]
 
 ### (a)
 
-**Chosing models** 
+**Choosing models** 
 
 Before diving into the multiple imputation I decided to study the distribution of observed variables. While we covered that 
 the distribution of observed vales does not give accurate information about the true distribution of a random variable. However, 
-knowing the shape of observed distribution might be able to suggest a proper model for the imputaton. 
+knowing the shape of observed distribution might be able to suggest a proper model for the imputation. 
 
 ```{r}
 #| eval: false 
@@ -57,7 +57,7 @@ summary(nlsyV)
 
 **ppvtr.36 distribution** 
 
-We begin by studying the shape of a response variable in this study. We can use a Bayesian Normal Linear model for the inputaion 
+We begin by studying the shape of a response variable in this study. We can use a Bayesian Normal Linear model for the imputation 
 task here. 
 
 ```{R}
@@ -84,9 +84,9 @@ ggplot(data = nlsyV,
 ```
 
 <!--
-Exp(log(income )) is handled with passive impuattion: talked in the book 
+Exp(log(income )) is handled with passive imputation: talked in the book 
 
-MICE can specify the order of the imputatuon: impute variables with missing data first, and go down the list 
+MICE can specify the order of the imputation: impute variables with missing data first, and go down the list 
 --> 
 
 Variables `b.marr` and `momed` will be imputed using a logistic regression and proportional odds models respectively. 
@@ -179,7 +179,7 @@ estiamtes <- read_csv('problem 2 parameter estimates.csv')[,-1]
 errors <- read_csv('problem 2 errors estimates.csv')[,-1]
 ```
 
-In the simulation code provided, it appears that the true relationship between $Y$ and predctors $X_i$ foir $i$ = 1,2,3,4,5
+In the simulation code provided, it appears that the true relationship between $Y$ and predictors $X_i$ for $i$ = 1,2,3,4,5
 is given by this equation: 
 
 $$\large Y = 2 + X_1 + X_2 + X_3 + 2 * X_4 + 2 * X_5 + \epsilon$$
@@ -240,7 +240,7 @@ I would say that all these look approximately normal. All distributions will hav
 will probably have the smallest variance, even though we know method C is a flawed method. 
 
 ```{r}
-#| echio: true 
+#| echo: true 
 
 estiamtes %>% 
   summarise(across(everything(), sd)) %>% 
@@ -277,7 +277,7 @@ errors %>%
 
 ```
 
-<!-- clsoe to value in part b???--> 
+<!-- close to value in part b???--> 
 
 ```{r}
 
@@ -348,7 +348,6 @@ Sample size of 100, 200, ... , 500, as well as modifying the intercept for proba
 intercept to range from 0.25 to 2, in 0.25 increments. 
 
 ```{r}
-
 estimates_extra <- 
   read_csv("problem 2 parameter estimates extra credit.csv")[,-1]
 ```
@@ -435,6 +434,34 @@ estimates_extra %>%
 
 ```
 
+We can also do a regression study and see how the different configurations affect the average bias of estimates. 
+
+I am using a regression model that uses N, Intercept for missingness, and Imputation method as predictors, and Bias of each 
+obtained Beta as a response variable
+
+```{R}
+#| echo: true
+estimates_extra %>% 
+  pivot_longer(
+    cols = colnames(estimates_extra)[1:5], 
+    values_to = "estiamtes", 
+    names_to = "impute_method"
+  ) %>% 
+  mutate(bias = estiamtes - 1) -> model
+
+summary(lm(bias ~ N * INT * impute_method, data = model))
+
+```
+
+These results confirm everything we learned about the data visually. Not many factors affect average bias for the methods. 
+
+Coefficient for average Bias for method C is quite large, which confirms that the method is fairly biased on average. 
+
+Additionally, interaction with the missingness parameter is statistically significant, which again, confirms the results we 
+saw on the plot. As missingness decreases, the average estimate for Beta becomes less biased, when using imputation method C.
+
+**Summary**
+
 It appears that the methods most affected by the missing values is method C, which has been the most problematic so far. As the proportion of missing 
 values in X1 and X4 decreases, average bias of beta decreases as well. Method B seems to have similar behaviors, although not as strong. 
 
@@ -442,6 +469,7 @@ Again, complete case analysis exhibits similar behavior to single and multiple i
 
 It is, again, reassuring to see that imputation methods with error structures have very robust behavior regardless of variation in sample size and 
 missingness levels. 
+
 
 
 
