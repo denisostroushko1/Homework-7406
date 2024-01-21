@@ -5,8 +5,6 @@ found a lot of useful packages that interact with `ggplot` mainly.
 
 Also, textbook and lecture materials cover way more intro-level regression methods and theory, and I wish to use this file as a table of  contents. 
 
-Last update: `r Sys.Date()`
-
 By default, I use `kable`, `kableExtra`, `tidyverse`, and `ggplot2` a lot, so I will only be making notes of new packages 
 I find and use for the analysis. 
 
