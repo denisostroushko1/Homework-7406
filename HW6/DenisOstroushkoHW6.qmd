@@ -501,7 +501,10 @@ A new calibration plot on @fig-new-calib suggests that inclusion of more variabl
 #| fig-height: 6
 val.prob(predictions, heartf_val$DEATH_EVENT)
 
+res_lookup <- val.prob(predictions, heartf_val$DEATH_EVENT, probability = T)
+
 ```
+
 
 
 
